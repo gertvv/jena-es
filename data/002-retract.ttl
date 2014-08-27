@@ -1,0 +1,5 @@
+@prefix foaf: <http://xmlns.com/foaf/0.1/>.
+@prefix person: <http://test.drugis.org/person/> .
+
+person:Gert
+  foaf:mbox <mailto:gertvv@hccnet.nl> .

@@ -1,0 +1,4 @@
+@prefix person: <http://test.drugis.org/person/> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#>.
+
+person:ValkenhoefGHMvan owl:sameAs person:Gert .

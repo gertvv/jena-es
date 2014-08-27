@@ -1,0 +1,6 @@
+@prefix foaf: <http://xmlns.com/foaf/0.1/>.
+@prefix person: <http://test.drugis.org/person/> .
+
+person:ValkenhoefGHMvan a foaf:Person ;
+  foaf:name "Valkenhoef, G.H.M. van" ;
+  foaf:mbox <mailto:g.h.m.van.valkenhoef@umcg.nl> .

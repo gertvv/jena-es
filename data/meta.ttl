@@ -1,0 +1,39 @@
+@prefix dc:   <http://purl.org/dc/elements/1.1/>.
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#>.
+
+@prefix stmt: <http://test.drugis.org/ontology/statements#> .
+@prefix claim: <http://test.drugis.org/claim/> .
+@prefix retract: <http://test.drugis.org/retract/> .
+@prefix closure: <http://test.drugis.org/closure/> .
+@prefix person: <http://test.drugis.org/person/> .
+
+
+<http://test.drugis.org/delta/001> a stmt:Delta ;
+  stmt:claims claim:001 ;
+  stmt:closure closure:001 ;
+  stmt:about person:Gert ;
+  dc:date "2003-04-17T14:35:03"^^xsd:dateTime ;
+  dc:creator person:Gert .
+
+<http://test.drugis.org/delta/002> a stmt:Delta ;
+  stmt:claims claim:002 ;
+  stmt:retractions retract:002 ;
+  stmt:closure closure:002 ;
+  stmt:about person:Gert ;
+  dc:date "2008-05-13T14:35:03"^^xsd:dateTime ;
+  dc:creator person:Gert . 
+
+<http://test.drugis.org/delta/003> a stmt:Delta ;
+  stmt:claims claim:003 ;
+  stmt:closure closure:003 ;
+  stmt:about person:ValkenhoefGHMvan ;
+  dc:date "2009-04-01T09:00:00"^^xsd:dateTime ;
+  dc:creator person:Gert .
+
+<http://test.drugis.org/delta/004> a stmt:Delta ;
+  stmt:claims claim:004 ;
+  stmt:closure closure:004 ;
+  stmt:about <http://test.drugis.org/persons> ;
+  dc:date "2009-05-12T16:55:13"^^xsd:dateTime ;
+  dc:creator person:Gert .
+
