@@ -23,9 +23,9 @@ public class EventSourced_REST_R extends SPARQL_REST_R {
 		String a = "http://test.drugis.org/person/Gert";
 		String t = action.request.getParameter("t");
 
-		serverLog.info(format("REST_R %s %s %s", dsgInternal, a, t));
+		serverLog.info(format("REST_R %s %s %s", action.dsRef, a, t));
 
-		Dataset ds = EventSourced_QueryDataset.createEventSourcedDataset(DatasetImpl.wrap(dsgInternal), a, t);
+		Dataset ds = EventSource.createView(DatasetImpl.wrap(dsgInternal), a, t);
 		DatasetRef desc = new DatasetRef();
 		desc.dataset = ds.asDatasetGraph();
 		action.setDataset(desc);

@@ -44,6 +44,7 @@ import org.apache.jena.fuseki.server.ServerConfig;
 import org.apache.jena.fuseki.server.ServiceRef;
 import org.apache.jena.fuseki.servlets.DumpServlet;
 import org.apache.jena.fuseki.servlets.SPARQL_QueryGeneral;
+import org.apache.jena.fuseki.servlets.SPARQL_REST_R;
 import org.apache.jena.fuseki.servlets.SPARQL_REST_RW;
 import org.apache.jena.fuseki.servlets.SPARQL_UberServlet;
 import org.apache.jena.fuseki.servlets.SPARQL_Update;
@@ -334,6 +335,7 @@ public class EventSourcingSPARQLServer {
         HttpServlet sparqlHttpRW = new SPARQL_REST_RW() ;
         HttpServlet sparqlDataset = new SPARQL_UberServlet.AccessByConfig() ;
         HttpServlet esHistory = new EventSourced_History();
+        HttpServlet esDelta = new SPARQL_REST_R() ;
 
         if ( !überServlet ) {
             // If uberserver, these are unnecessary but can be used.
@@ -344,6 +346,8 @@ public class EventSourcingSPARQLServer {
             addServlet(context, datasetPath, sparqlHttpR, dsDesc.readGraphStore, enableCompression) ;
             addServlet(context, datasetPath, sparqlHttpRW, dsDesc.readWriteGraphStore, enableCompression) ;
             addServlet(context, datasetPath, esHistory, dsDesc.history, enableCompression);
+            addServlet(context, datasetPath, esDelta, dsDesc.delta, enableCompression);
+
             // This adds direct operations on the dataset itself.
             // addServlet(context, datasetPath, sparqlDataset,
             // ListOfEmptyString, enableCompression) ;

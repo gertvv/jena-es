@@ -1,0 +1,19 @@
+PREFIX dc: <http://purl.org/dc/elements/1.1/>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+
+PREFIX stmt: <http://test.drugis.org/ontology/statements#>
+PREFIX claim: <http://test.drugis.org/claim/>
+PREFIX retract: <http://test.drugis.org/retract/>
+PREFIX person: <http://test.drugis.org/person/>
+
+CONSTRUCT {
+    ?delta ?p ?o .
+} WHERE {
+  GRAPH <http://test.drugis.org/meta> {
+    ?delta dc:creator $author .
+    ?delta stmt:about $topic .
+    ?delta dc:date ?date .
+    
+    ?delta ?p ?o .
+  }
+}

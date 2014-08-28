@@ -25,9 +25,13 @@ import org.apache.jena.fuseki.server.CounterSet;
 import org.apache.jena.fuseki.server.DatasetRef;
 import org.apache.jena.fuseki.server.ServiceRef;
 
+/**
+ * Hack DatasetRef to add the "history" service.
+ */
 public class EventSourcingDatasetRef extends DatasetRef
 {
     public ServiceRef history                     = new ServiceRef("history") ;
+    public ServiceRef delta                     = new ServiceRef("delta") ;
     
     private Map<String, ServiceRef> endpoints   = new HashMap<String, ServiceRef>() ;
     private boolean initialized = false ;

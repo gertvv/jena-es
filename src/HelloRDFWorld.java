@@ -51,7 +51,7 @@ public class HelloRDFWorld {
 //		Dataset dataset = DatasetImpl.wrap(new EventSourcingDatasetGraph(datasetInternal.asDatasetGraph()));
 		String a = "http://test.drugis.org/person/Gert";
 		String t = "2006-01-23T00:00:00";
-		Dataset dataset = EventSourced_QueryDataset.createEventSourcedDataset(datasetInternal, a, t);
+		Dataset dataset = EventSource.createView(datasetInternal, a, t);
 		
 //		dataset.getNamedModel("http://test.drugis.org/person/Gert").write(System.out, "Turtle");
 		
@@ -61,7 +61,7 @@ public class HelloRDFWorld {
 		queryOut(query, dataset);
 		
 		t = "2009-04-01T00:00:00";
-		dataset = EventSourced_QueryDataset.createEventSourcedDataset(datasetInternal, a, t);
+		dataset = EventSource.createView(datasetInternal, a, t);
 		System.out.println("Response at " + t);
 		queryOut(query, dataset);
 		
@@ -77,6 +77,7 @@ public class HelloRDFWorld {
 		ref.query.endpoints.add(HttpNames.ServiceQueryAlt);
 		ref.readGraphStore.endpoints.add(HttpNames.ServiceData);
 		ref.history.endpoints.add("history");
+		ref.delta.endpoints.add("delta");
 
 		ServerConfig config = new ServerConfig();
 		config.datasets = Arrays.asList(new DatasetRef[] { ref });
