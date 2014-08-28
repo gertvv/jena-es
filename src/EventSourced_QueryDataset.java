@@ -49,6 +49,16 @@ public class EventSourced_QueryDataset extends SPARQL_QueryDataset {
 	 * @return The dataset consisting of statements that were made by agent a by time t.
 	 */
 	public static Dataset createEventSourcedDataset(Dataset eventSource, String a, String t) {
+		if (eventSource == null) {
+			throw new NullPointerException("Event Source may not be null");
+		}
+		if (a == null) {
+			throw new NullPointerException("Agent may not be null");
+		}
+		if (t == null) {
+			throw new NullPointerException("Time may not be null");
+		}
+		
 		try {
 			String queryStr = HelloRDFWorld.readFile("findDeltas.sparql", Charset.forName("UTF-8"));
 //			ParameterizedSparqlString sparql = new ParameterizedSparqlString(); FIXME: use instead of String.replace

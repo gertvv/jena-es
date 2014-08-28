@@ -43,26 +43,7 @@ public class HelloRDFWorld {
 		byte[] encoded = Files.readAllBytes(Paths.get(path));
 		return new String(encoded, encoding);
 	}
-	
-	
-	
-//	public static class MySPARQLServer extends SPARQLServer {
-//		public SPARQLServer(ServerConfig config) {
-//	        this.serverConfig = config ;
-//	        // Currently server-wide.
-//	        Fuseki.verboseLogging = config.verboseLogging ;
-//	
-//	        // GZip compression
-//	        // Note that regardless of this setting we'll always leave it turned off
-//	        // for the servlets
-//	        // where it makes no sense to have it turned on e.g. update and upload
-//	
-//	        ServletContextHandler context = buildServer(serverConfig.jettyConfigFile, config.enableCompression) ;
-//	        configureDatasets(context) ;
-//	    }
-//	}
 
-	
 	public static void main(String[] args) {
 		
 		Dataset datasetInternal = (Dataset) AssemblerUtils.build("assemble.ttl", DatasetAssemblerVocab.tDataset);
@@ -88,13 +69,15 @@ public class HelloRDFWorld {
 		//server.start();
 		// http://localhost:3030/comp/query?query=PREFIX%20foaf:%20%3Chttp://xmlns.com/foaf/0.1/%3E%20PREFIX%20person:%20%3Chttp://test.drugis.org/person/%3E%20SELECT%20?mbox%20?url%20WHERE%20{%20GRAPH%20person:Gert%20{%20person:Gert%20foaf:homepage%20?url;%20foaf:mbox%20?mbox%20.%20}%20}
 		
-		DatasetRef ref = new DatasetRef();
+		EventSourcingDatasetRef ref = new EventSourcingDatasetRef();
 		String datasetPath = "/ds";
 		ref.name = datasetPath;
 		ref.dataset = datasetInternal.asDatasetGraph();
 		ref.query.endpoints.add(HttpNames.ServiceQuery);
 		ref.query.endpoints.add(HttpNames.ServiceQueryAlt);
-		
+		ref.readGraphStore.endpoints.add(HttpNames.ServiceData);
+		ref.history.endpoints.add("history");
+
 		ServerConfig config = new ServerConfig();
 		config.datasets = Arrays.asList(new DatasetRef[] { ref });
 		config.port = 3030;
