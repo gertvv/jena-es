@@ -81,6 +81,8 @@ public class HelloRDFWorld {
 		ServerConfig config = new ServerConfig();
 		config.datasets = Arrays.asList(new DatasetRef[] { ref });
 		config.port = 3030;
+		config.pagesPort = 3030;
+		config.pages = "pages";
 		//SPARQLServer server = new SPARQLServer(config);
 		EventSourcingSPARQLServer server = new EventSourcingSPARQLServer(config);
 		server.start();

@@ -1,0 +1,19 @@
+{
+  "name": "jenaEventSourcingDemo",
+  "version": "0.0.0",
+  "authors": [
+    "Gert van Valkenhoef <g.h.m.van.valkenhoef@rug.nl>"
+  ],
+  "license": "Apache 2",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "jquery-json": "~2.5.1"
+  }
+}
