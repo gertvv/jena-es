@@ -55,6 +55,7 @@ public class EventSourcingDatasetRef extends DatasetRef
         add(readGraphStore) ;
         add(readWriteGraphStore) ;
         add(history);
+        add(delta);
         addCounters() ;
     }
     
@@ -95,6 +96,10 @@ public class EventSourcingDatasetRef extends DatasetRef
         history.getCounters().add(CounterName.Requests) ;
         history.getCounters().add(CounterName.RequestsGood) ;
         history.getCounters().add(CounterName.RequestsBad) ;
+
+        delta.getCounters().add(CounterName.Requests) ;
+        delta.getCounters().add(CounterName.RequestsGood) ;
+        delta.getCounters().add(CounterName.RequestsBad) ;
         
         addCountersForGSP(readWriteGraphStore.getCounters(), false) ;
         if ( readGraphStore != readWriteGraphStore )

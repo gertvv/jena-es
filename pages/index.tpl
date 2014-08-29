@@ -43,6 +43,19 @@ The graph at time = <input name="time" value="2006-01-23T00:00:00">
 </div>
 
 <div class="form">
+Update the graph: <select name="writeMethod"><option value="POST">Add to the graph</option><option value="PUT">Overwrite the graph</option></select>
+<div>
+<textarea name="turtle" cols="80" rows="10">
+@prefix foaf: &lt;http://xmlns.com/foaf/0.1/&gt;
+@prefix person: &lt;http://test.drugis.org/person/&gt;
+
+person:Gert foaf:homepage <http://orcid.org/0000-0001-9231-2770>;
+</textarea>
+</div>
+<input type="button" onclick="update()" value="Update">
+</div>
+
+<div class="form">
 The history of the graph 
 <input type="button" onclick="history()" value="Get">
 <div id="history"></div>
@@ -84,6 +97,23 @@ function query() {
   });
 }
 
+function update() {
+  var dataset = $("select[name='dataset']").val();
+  var graph = $("input[name='graph']").val();
+  var method = $("select[name='writeMethod']").val();
+  var turtle = $("textarea[name='turtle']").val();
+  console.log(dataset, graph, method, turtle);
+  $.ajax({
+    url: dataset + "/data?graph=" + graph,
+    data: turtle,
+    headers: { "Content-Type": "text/turtle" },
+    type: method,
+    success: function(data, status) {
+      console.log("Whoopie");
+    }
+  });
+}
+
 function get() {
   var dataset = $("select[name='dataset']").val();
   var graph = $("input[name='graph']").val();
@@ -118,14 +148,14 @@ function fetchDelta(el, graph) {
 
 var id = 0;
 
-function addHistory() {
-  var claimsURI = this.claims ? this.claims.value._string : undefined;
-  var retractionsURI = this.retractions ? this.retractions.value._string : undefined;
+function addHistory(item) {
+  var claimsURI = item.claims ? item.claims.value._string : undefined;
+  var retractionsURI = item.retractions ? item.retractions.value._string : undefined;
 
   var entry = document.createElement("div");
   entry.className = "historyEntry";
   entry.id = "history" + (++id);
-  entry.innerHTML = this.delta.value.path + " by " + this.author.value.path + " at " + this.date.value;
+  entry.innerHTML = item.delta.value.path + " by " + item.author.value.path + " at " + item.date.value;
   var fetch = document.createElement("input");
   fetch.type = "button";
   fetch.value = "Show";
@@ -147,6 +177,12 @@ function addHistory() {
   $("#history").append(entry);
 }
 
+function sortByDate(a, b) {
+  var aDate = a.date;
+  var bDate = b.date; 
+  return ((aDate < bDate) ? -1 : ((aDate > bDate) ? 1 : 0));
+}
+
 function history() {
   var dataset = $("select[name='dataset']").val();
   var graph = $("input[name='graph']").val();
@@ -158,8 +194,7 @@ function history() {
     headers: { "Accept": "application/rdf+xml" },
     type: "GET",
     success: function(data, status) {
-      var rdf = $.rdf().load(data);
-      rdf
+      $.rdf().load(data)
         .prefix('dc', 'http://purl.org/dc/elements/1.1/')
         .prefix('stmt', 'http://test.drugis.org/ontology/statements#')
         .prefix('person', 'http://test.drugis.org/person/')
@@ -167,7 +202,9 @@ function history() {
         .where('?delta dc:creator ?author')
         .optional('?delta stmt:claims ?claims')
         .optional('?delta stmt:retractions ?retractions')
-        .each(addHistory);
+        .matches.map(function(match) { return match.bindings; })
+        .sort(sortByDate)
+        .forEach(addHistory);
     }
   });
 }

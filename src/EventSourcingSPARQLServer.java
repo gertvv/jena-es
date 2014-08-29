@@ -332,7 +332,7 @@ public class EventSourcingSPARQLServer {
         HttpServlet sparqlUpdate = new SPARQL_Update() ;
         HttpServlet sparqlUpload = new SPARQL_Upload() ;
         HttpServlet sparqlHttpR = new EventSourced_REST_R() ;
-        HttpServlet sparqlHttpRW = new SPARQL_REST_RW() ;
+        HttpServlet sparqlHttpRW = new EventSourced_REST_RW() ;
         HttpServlet sparqlDataset = new SPARQL_UberServlet.AccessByConfig() ;
         HttpServlet esHistory = new EventSourced_History();
         HttpServlet esDelta = new SPARQL_REST_R() ;

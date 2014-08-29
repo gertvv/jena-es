@@ -75,7 +75,7 @@ public class HelloRDFWorld {
 		ref.dataset = datasetInternal.asDatasetGraph();
 		ref.query.endpoints.add(HttpNames.ServiceQuery);
 		ref.query.endpoints.add(HttpNames.ServiceQueryAlt);
-		ref.readGraphStore.endpoints.add(HttpNames.ServiceData);
+		ref.readWriteGraphStore.endpoints.add(HttpNames.ServiceData);
 		ref.history.endpoints.add("history");
 		ref.delta.endpoints.add("delta");
 
