@@ -1,13 +1,11 @@
+import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Set;
-
-import org.apache.jena.atlas.iterator.Iter;
 
 import com.hp.hpl.jena.graph.Graph;
 import com.hp.hpl.jena.graph.Node;
+import com.hp.hpl.jena.graph.Triple;
 import com.hp.hpl.jena.graph.compose.Delta;
 import com.hp.hpl.jena.query.Dataset;
 import com.hp.hpl.jena.query.DatasetFactory;
@@ -20,18 +18,36 @@ import com.hp.hpl.jena.sparql.core.Quad;
 import com.hp.hpl.jena.sparql.graph.GraphFactory;
 import com.hp.hpl.jena.sparql.util.Context;
 import com.hp.hpl.jena.update.GraphStore;
+import com.hp.hpl.jena.util.iterator.ExtendedIterator;
 
-
+@SuppressWarnings( "deprecation" )
 public class DatasetGraphDelta extends DatasetGraphBase implements GraphStore {
 	
 	private DatasetGraph d_next;
-	private DatasetGraph d_current;
-	private Map<Node, Graph> d_touched;
+	private DatasetGraph d_base;
+	private Map<Node, Delta> d_touched;
 
 	public DatasetGraphDelta(DatasetGraph base) {
-		d_current = base;
-		d_next = DatasetGraphFactory.create(d_current);
-		d_touched = new HashMap<Node, Graph>();
+		d_base = base;
+		d_next = DatasetGraphFactory.create(d_base);
+		d_touched = new HashMap<Node, Delta>();
+	}
+	
+	public Map<Node, Delta> getModifications() {
+		return Collections.unmodifiableMap(d_touched);
+	}
+
+	private Graph touchGraph(Node graphName) {
+		if (!d_touched.containsKey(graphName)) {
+			Graph graph = d_base.getGraph(graphName);
+			if (graph == null) {
+				graph = GraphFactory.createGraphMem();
+			}
+			Delta delta = new Delta(graph);
+			d_next.addGraph(graphName, delta);
+			d_touched.put(graphName, delta);
+		}
+		return d_touched.get(graphName);
 	}
 
 	@Override
@@ -56,12 +72,16 @@ public class DatasetGraphDelta extends DatasetGraphBase implements GraphStore {
 	
 	@Override
 	public void addGraph(Node graphName, Graph graph) {
-		d_next.addGraph(graphName, graph);
+        Graph target = touchGraph(graphName);
+        target.clear();
+		for (ExtendedIterator<Triple> it = graph.find(Node.ANY, Node.ANY, Node.ANY); it.hasNext(); ) {
+			target.add(it.next());
+		}
 	}
 
 	@Override
 	public void removeGraph(Node graphName) {
-		d_next.removeGraph(graphName);
+		touchGraph(graphName).clear();
 	}
 
 	@Override
@@ -71,24 +91,12 @@ public class DatasetGraphDelta extends DatasetGraphBase implements GraphStore {
 
 	@Override
 	public void add(Quad quad) {
-		Graph graph = d_next.getGraph(quad.getGraph());
-		if (graph == null) {
-			graph = GraphFactory.createGraphMem();
-		}
-        graph = new Delta(graph);
-
-        graph.add(quad.asTriple());
-        d_next.addGraph(quad.getGraph(), graph);
+		touchGraph(quad.getGraph()).add(quad.asTriple());
 	}
 
 	@Override
 	public void delete(Quad quad) {
-		if (d_next.containsGraph(quad.getGraph())) {
-			Graph graph = d_next.getGraph(quad.getGraph());
-			graph = new Delta(graph);
-			graph.delete(quad.asTriple());
-			d_next.addGraph(quad.getGraph(), graph);
-		}
+		touchGraph(quad.getGraph()).delete(quad.asTriple());
 	}
 
 	@Override
