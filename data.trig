@@ -1,0 +1,69 @@
+@prefix dc:   <http://purl.org/dc/elements/1.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+
+@prefix es: <http://drugis.org/eventSourcing/es#> .
+@prefix event: <http://drugis.org/eventSourcing/event/> .
+@prefix revision: <http://drugis.org/eventSourcing/revision/> .
+@prefix assert: <http://drugis.org/eventSourcing/assert/> .
+@prefix retract: <http://drugis.org/eventSourcing/retract/> .
+
+es:log {
+
+  es:log a es:Log ;
+    es:head ( event:94b23234-43e7-11e4-ac24-337dc3ef5145 event:67ed1d1a-43ea-11e4-9186-776438a7b3d0 ) .
+
+  # Last event
+
+  event:94b23234-43e7-11e4-ac24-337dc3ef5145 a es:Event ;
+    dc:date "2014-09-24T12:58:16,835290832+0000"^^xsd:dateTime ;
+    dc:creator <http://example.com/Spiderman> ;
+    es:has_revision revision:302431f4-43e8-11e4-8745-c72e64fa66b1 ,
+                    revision:44ea0618-43e8-11e4-bcfb-bba47531d497 .
+
+  revision:302431f4-43e8-11e4-8745-c72e64fa66b1 a es:Revision ;
+    es:graph <http://example.com/Spiderman> ;
+    es:assertions assert:302431f4-43e8-11e4-8745-c72e64fa66b1 .
+
+  revision:44ea0618-43e8-11e4-bcfb-bba47531d497 a es:Revision ;
+    es:graph <http://example.com/PeterParker> ;
+    es:assertions assert:44ea0618-43e8-11e4-bcfb-bba47531d497 ;
+    es:retractions retract:44ea0618-43e8-11e4-bcfb-bba47531d497 .
+
+  # First event
+
+  event:67ed1d1a-43ea-11e4-9186-776438a7b3d0 a es:Event ;
+    dc:date "2014-09-24T12:45:25,048366032+0000"^^xsd:dateTime ;
+    es:has_revision revision:38fc1de7a-43ea-11e4-a12c-3314171ce0bb .
+
+  revision:38fc1de7a-43ea-11e4-a12c-3314171ce0bb a es:Revision ;
+    es:graph <http://example.com/PeterParker> ;
+    es:assertions assert:844908ec-43eb-11e4-ac51-6b523949084e .
+
+}
+
+assert:844908ec-43eb-11e4-ac51-6b523949084e {
+
+  <http://example.com/PeterParker> a foaf:Person ;
+    foaf:name "Peter Parker", "Spiderman" .
+
+}
+
+retract:44ea0618-43e8-11e4-bcfb-bba47531d497 {
+
+  <http://example.com/PeterParker> foaf:name "Spiderman" .
+
+}
+
+assert:44ea0618-43e8-11e4-bcfb-bba47531d497 {
+
+  <http://example.com/PeterParker> foaf:homepage <http://www.okcupid.com/profile/PeterParker> .
+
+}
+
+assert:302431f4-43e8-11e4-8745-c72e64fa66b1 {
+
+  <http://example.com/Spiderman> a foaf:Person;
+    foaf:name "Spiderman" .
+
+}

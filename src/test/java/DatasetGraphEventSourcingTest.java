@@ -19,6 +19,7 @@ import com.hp.hpl.jena.sparql.core.Quad;
 import com.hp.hpl.jena.sparql.graph.GraphFactory;
 
 
+@SuppressWarnings("deprecation")
 public class DatasetGraphEventSourcingTest {
 
 	private DatasetGraph d_base;

@@ -7,21 +7,19 @@ import com.hp.hpl.jena.graph.Graph;
 import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.graph.Triple;
 import com.hp.hpl.jena.graph.compose.Delta;
-import com.hp.hpl.jena.query.Dataset;
-import com.hp.hpl.jena.query.DatasetFactory;
-import com.hp.hpl.jena.shared.Lock;
 import com.hp.hpl.jena.sparql.core.DatasetGraph;
 import com.hp.hpl.jena.sparql.core.DatasetGraphBase;
 import com.hp.hpl.jena.sparql.core.DatasetGraphFactory;
 import com.hp.hpl.jena.sparql.core.GraphView;
 import com.hp.hpl.jena.sparql.core.Quad;
 import com.hp.hpl.jena.sparql.graph.GraphFactory;
-import com.hp.hpl.jena.sparql.util.Context;
-import com.hp.hpl.jena.update.GraphStore;
 import com.hp.hpl.jena.util.iterator.ExtendedIterator;
 
+/**
+ * A read-write Dataset that tracks changes.
+ */
 @SuppressWarnings( "deprecation" )
-public class DatasetGraphDelta extends DatasetGraphBase implements GraphStore {
+public class DatasetGraphDelta extends DatasetGraphBase {
 	
 	private DatasetGraph d_next;
 	private DatasetGraph d_base;
@@ -33,6 +31,9 @@ public class DatasetGraphDelta extends DatasetGraphBase implements GraphStore {
 		d_touched = new HashMap<Node, Delta>();
 	}
 	
+	/**
+	 * @return A map from modified graphs to a Delta recording the changes.
+	 */
 	public Map<Node, Delta> getModifications() {
 		return Collections.unmodifiableMap(d_touched);
 	}
@@ -129,41 +130,7 @@ public class DatasetGraphDelta extends DatasetGraphBase implements GraphStore {
 	}
 
 	@Override
-	public Lock getLock() {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public Context getContext() {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
 	public long size() {
 		return d_next.size();
 	}
-
-	@Override
-	public void close() {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public Dataset toDataset() {
-		return DatasetFactory.create(this);
-	}
-
-	@Override
-	public void startRequest() {
-		// NI
-	}
-
-	@Override
-	public void finishRequest() {
-		// NI
-	}
-
 }
