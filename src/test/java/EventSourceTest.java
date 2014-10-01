@@ -135,4 +135,23 @@ public class EventSourceTest {
 		assertEquals(2, graph.size());
 		assertEquals(2, ds.size());
 	}
+	
+	@Test
+	public void testWriteToLog() {
+		DatasetGraph ds = EventSource2.replayLog(d_dataset, d_logUri);
+		DatasetGraphDelta delta = new DatasetGraphDelta(ds);
+		delta.add(createURI("http://example.com/PeterParker"), createURI("http://example.com/PeterParker"), createURI(FOAF + "givenName"), createLiteral("Peter"));
+		delta.removeGraph(createURI("http://example.com/Spiderman"));
+		EventSource2.writeToLog(d_dataset, d_logUri, delta);
+		
+		ds = EventSource2.replayLog(d_dataset, d_logUri);
+		Graph graph = ds.getGraph(createURI("http://example.com/PeterParker"));
+		assertTrue(graph.contains(createURI("http://example.com/PeterParker"), RDF.Nodes.type, createURI(FOAF + "Person")));
+		assertTrue(graph.contains(createURI("http://example.com/PeterParker"), createURI(FOAF + "name"), createLiteral("Peter Parker")));
+		assertTrue(graph.contains(createURI("http://example.com/PeterParker"), createURI(FOAF + "givenName"), createLiteral("Peter")));
+		assertTrue(graph.contains(createURI("http://example.com/PeterParker"), createURI(FOAF + "homepage"), createURI("http://www.okcupid.com/profile/PeterParker")));
+		assertEquals(4, graph.size());
+		graph = ds.getGraph(createURI("http://example.com/Spiderman"));
+		assertTrue(graph == null || graph.isEmpty());
+	}
 }
