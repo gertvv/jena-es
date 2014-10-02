@@ -20,7 +20,7 @@ import com.hp.hpl.jena.sparql.graph.GraphFactory;
 
 
 @SuppressWarnings("deprecation")
-public class DatasetGraphEventSourcingTest {
+public class DatasetGraphDeltaTest {
 
 	private DatasetGraph d_base;
 	private DatasetGraphDelta d_next;

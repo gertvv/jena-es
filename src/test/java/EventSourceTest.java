@@ -11,6 +11,7 @@ import org.junit.Test;
 
 import com.hp.hpl.jena.graph.Graph;
 import com.hp.hpl.jena.graph.Node;
+import com.hp.hpl.jena.query.ReadWrite;
 import com.hp.hpl.jena.sparql.core.DatasetGraph;
 import com.hp.hpl.jena.sparql.core.DatasetGraphFactory;
 import com.hp.hpl.jena.sparql.graph.GraphFactory;
@@ -79,24 +80,10 @@ public class EventSourceTest {
 	public void testApplyEvent() {
 		DatasetGraph ds = DatasetGraphFactory.createMem();
 		ds = EventSource2.applyEvent(d_dataset, d_logUri, ds, d_event1Uri);
-		Graph graph = ds.getGraph(createURI("http://example.com/PeterParker"));
-		assertTrue(graph.contains(createURI("http://example.com/PeterParker"), RDF.Nodes.type, createURI(FOAF + "Person")));
-		assertTrue(graph.contains(createURI("http://example.com/PeterParker"), createURI(FOAF + "name"), createLiteral("Spiderman")));
-		assertTrue(graph.contains(createURI("http://example.com/PeterParker"), createURI(FOAF + "name"), createLiteral("Peter Parker")));
-		assertEquals(3, graph.size());
-		assertEquals(1, ds.size());
+		checkGraphAfterEvent1(ds);
 		
 		ds = EventSource2.applyEvent(d_dataset, d_logUri, ds, d_event2Uri);
-		graph = ds.getGraph(createURI("http://example.com/PeterParker"));
-		assertTrue(graph.contains(createURI("http://example.com/PeterParker"), RDF.Nodes.type, createURI(FOAF + "Person")));
-		assertTrue(graph.contains(createURI("http://example.com/PeterParker"), createURI(FOAF + "name"), createLiteral("Peter Parker")));
-		assertTrue(graph.contains(createURI("http://example.com/PeterParker"), createURI(FOAF + "homepage"), createURI("http://www.okcupid.com/profile/PeterParker")));
-		assertEquals(3, graph.size());
-		graph = ds.getGraph(createURI("http://example.com/Spiderman"));
-		assertTrue(graph.contains(createURI("http://example.com/Spiderman"), RDF.Nodes.type, createURI(FOAF + "Person")));
-		assertTrue(graph.contains(createURI("http://example.com/Spiderman"), createURI(FOAF + "name"), createLiteral("Spiderman")));
-		assertEquals(2, graph.size());
-		assertEquals(2, ds.size());
+		checkGraphAfterEvent2(ds);
 	}
 
 	@Test
@@ -116,15 +103,61 @@ public class EventSourceTest {
 	public void testReplayLog() {
 		DatasetGraph ds = DatasetGraphFactory.createMem();
 		ds = EventSource2.replayLogUntil(d_dataset, d_logUri, d_event1Uri);
+		checkGraphAfterEvent1(ds);
+		
+		ds = EventSource2.replayLogUntil(d_dataset, d_logUri, d_event2Uri);
+		checkGraphAfterEvent2(ds);
+	}
+	
+	@Test
+	public void testWriteToLog() {
+		DatasetGraph ds = EventSource2.replayLog(d_dataset, d_logUri);
+		DatasetGraphDelta delta = new DatasetGraphDelta(ds);
+		applyGraphMod(delta);
+		EventSource2.writeToLog(d_dataset, d_logUri, delta);
+		
+		ds = EventSource2.replayLog(d_dataset, d_logUri);
+		checkGraphAfterMod(ds);
+	}
+	
+	@Test
+	public void testTransactionInterface() {
+		DatasetGraphEventSourcing ds = new DatasetGraphEventSourcing(d_dataset, d_logUri);
+
+		ds.begin(ReadWrite.READ);
+		checkGraphAfterEvent2(ds);
+		ds.end();
+
+		ds.begin(ReadWrite.WRITE);
+		applyGraphMod(ds);
+		checkGraphAfterMod(ds);
+		ds.abort();
+
+		ds.begin(ReadWrite.READ);
+		checkGraphAfterEvent2(ds);
+		ds.end();
+		
+		ds.begin(ReadWrite.WRITE);
+		applyGraphMod(ds);
+		checkGraphAfterMod(ds);
+		ds.commit();
+
+		ds.begin(ReadWrite.READ);
+		checkGraphAfterMod(ds);
+		ds.end();
+	}
+
+	private void checkGraphAfterEvent1(DatasetGraph ds) {
 		Graph graph = ds.getGraph(createURI("http://example.com/PeterParker"));
 		assertTrue(graph.contains(createURI("http://example.com/PeterParker"), RDF.Nodes.type, createURI(FOAF + "Person")));
 		assertTrue(graph.contains(createURI("http://example.com/PeterParker"), createURI(FOAF + "name"), createLiteral("Spiderman")));
 		assertTrue(graph.contains(createURI("http://example.com/PeterParker"), createURI(FOAF + "name"), createLiteral("Peter Parker")));
 		assertEquals(3, graph.size());
 		assertEquals(1, ds.size());
-		
-		ds = EventSource2.replayLogUntil(d_dataset, d_logUri, d_event2Uri);
-		graph = ds.getGraph(createURI("http://example.com/PeterParker"));
+	}
+
+	private void checkGraphAfterEvent2(DatasetGraph ds) {
+		Graph graph = ds.getGraph(createURI("http://example.com/PeterParker"));
 		assertTrue(graph.contains(createURI("http://example.com/PeterParker"), RDF.Nodes.type, createURI(FOAF + "Person")));
 		assertTrue(graph.contains(createURI("http://example.com/PeterParker"), createURI(FOAF + "name"), createLiteral("Peter Parker")));
 		assertTrue(graph.contains(createURI("http://example.com/PeterParker"), createURI(FOAF + "homepage"), createURI("http://www.okcupid.com/profile/PeterParker")));
@@ -135,16 +168,13 @@ public class EventSourceTest {
 		assertEquals(2, graph.size());
 		assertEquals(2, ds.size());
 	}
-	
-	@Test
-	public void testWriteToLog() {
-		DatasetGraph ds = EventSource2.replayLog(d_dataset, d_logUri);
-		DatasetGraphDelta delta = new DatasetGraphDelta(ds);
+
+	private void applyGraphMod(DatasetGraph delta) {
 		delta.add(createURI("http://example.com/PeterParker"), createURI("http://example.com/PeterParker"), createURI(FOAF + "givenName"), createLiteral("Peter"));
 		delta.removeGraph(createURI("http://example.com/Spiderman"));
-		EventSource2.writeToLog(d_dataset, d_logUri, delta);
-		
-		ds = EventSource2.replayLog(d_dataset, d_logUri);
+	}
+
+	private void checkGraphAfterMod(DatasetGraph ds) {
 		Graph graph = ds.getGraph(createURI("http://example.com/PeterParker"));
 		assertTrue(graph.contains(createURI("http://example.com/PeterParker"), RDF.Nodes.type, createURI(FOAF + "Person")));
 		assertTrue(graph.contains(createURI("http://example.com/PeterParker"), createURI(FOAF + "name"), createLiteral("Peter Parker")));

@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.TimeZone;
 import java.util.UUID;
 
-import com.hp.hpl.jena.datatypes.RDFDatatype;
 import com.hp.hpl.jena.datatypes.xsd.XSDDatatype;
 import com.hp.hpl.jena.graph.Graph;
 import com.hp.hpl.jena.graph.Node;
