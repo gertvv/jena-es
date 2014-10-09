@@ -1,0 +1,6 @@
+/target/
+/DB/
+*.swp
+.classpath
+.project
+.settings/
