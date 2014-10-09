@@ -8,7 +8,7 @@
 [] ja:loadClass "com.hp.hpl.jena.tdb.TDB" .
 tdb:DatasetTDB  rdfs:subClassOf  ja:RDFDataset .
 
-es:EventSourcedDataset ja:assembler "DatasetAssemblerEventSourcing" ;
+es:EventSourcedDataset ja:assembler "es.DatasetAssemblerEventSourcing" ;
   rdfs:subClassOf ja:RDFDataset .
 
 [] a fuseki:Server ;
@@ -28,7 +28,7 @@ es:EventSourcedDataset ja:assembler "DatasetAssemblerEventSourcing" ;
 <#service_history> a fuseki:Service ;
   fuseki:name "history" ;
   fuseki:serviceQuery "query" ;
-  fuseki:serviceReadOnlyGraphStore "data" ;
+  fuseki:serviceReadGraphStore "data" ;
   fuseki:dataset eg:source .
 
 eg:source a tdb:DatasetTDB ;

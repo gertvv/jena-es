@@ -1,3 +1,4 @@
+package es;
 import static com.hp.hpl.jena.sparql.util.graph.GraphUtils.exactlyOneProperty;
 
 import com.hp.hpl.jena.assembler.Assembler;

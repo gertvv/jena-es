@@ -17,6 +17,10 @@ import com.hp.hpl.jena.sparql.core.DatasetGraphFactory;
 import com.hp.hpl.jena.sparql.graph.GraphFactory;
 import com.hp.hpl.jena.vocabulary.RDF;
 
+import es.DatasetGraphDelta;
+import es.DatasetGraphEventSourcing;
+import es.EventSource2;
+
 
 public class EventSourceTest {
 	private static final String ES="http://drugis.org/eventSourcing/es#",

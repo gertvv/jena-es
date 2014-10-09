@@ -8,4 +8,4 @@ if [ ! -d "$FUSEKI_HOME" ]; then
   exit 1
 fi
 
-java -cp $FUSEKI_HOME/fuseki-server.jar:target/classes/ -Xmx1200M org.apache.jena.fuseki.FusekiCmd --pages $FUSEKI_HOME/pages --conf assemble-es.ttl
+java -cp $FUSEKI_HOME/fuseki-server.jar:target/classes/ -Xmx1200M fuseki.FusekiCmd --pages $FUSEKI_HOME/pages --conf assemble-es.ttl

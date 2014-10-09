@@ -18,6 +18,8 @@ import com.hp.hpl.jena.sparql.core.DatasetGraphFactory;
 import com.hp.hpl.jena.sparql.core.Quad;
 import com.hp.hpl.jena.sparql.graph.GraphFactory;
 
+import es.DatasetGraphDelta;
+
 
 @SuppressWarnings("deprecation")
 public class DatasetGraphDeltaTest {
