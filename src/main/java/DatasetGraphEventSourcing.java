@@ -6,6 +6,7 @@ import com.hp.hpl.jena.shared.Lock;
 import com.hp.hpl.jena.sparql.JenaTransactionException;
 import com.hp.hpl.jena.sparql.core.DatasetGraph;
 import com.hp.hpl.jena.sparql.core.DatasetGraphTrackActive;
+import com.hp.hpl.jena.sparql.core.Transactional;
 import com.hp.hpl.jena.sparql.util.Context;
 import com.hp.hpl.jena.update.GraphStore;
 
@@ -70,13 +71,17 @@ public class DatasetGraphEventSourcing extends DatasetGraphTrackActive implement
 	@Override
 	protected void _begin(ReadWrite readWrite) {
 		if (readWrite == ReadWrite.READ) { // read-only: construct a view
-			getLock().enterCriticalSection(Lock.READ);
+			getTransactional().begin(readWrite.READ);
 			d_txn.set(EventSource2.replayLog(d_eventSource, d_logUri));
 		} else { // read-write
-			getLock().enterCriticalSection(Lock.WRITE);
+			getTransactional().begin(readWrite.WRITE);
 			d_txn.set(new DatasetGraphDelta(EventSource2.replayLog(d_eventSource, d_logUri)));
 		}
 		
+	}
+
+	private Transactional getTransactional() {
+		return (Transactional)d_eventSource;
 	}
 	
 	private void checkWrite() {
@@ -90,22 +95,22 @@ public class DatasetGraphEventSourcing extends DatasetGraphTrackActive implement
 	protected void _commit() {
 		checkWrite();
 		EventSource2.writeToLog(d_eventSource, d_logUri, (DatasetGraphDelta) d_txn.get());
+		getTransactional().commit();
 		d_txn.remove();
-		getLock().leaveCriticalSection();
 	}
 
 	@Override
 	protected void _abort() {
 		checkWrite();
+		getTransactional().abort();
 		d_txn.remove();
-		getLock().leaveCriticalSection();
 	}
 
 	@Override
 	protected void _end() {
 		if (isInTransaction()) {
+			getTransactional().end();
 			d_txn.remove();
-			getLock().leaveCriticalSection();
 		}
 	}
 
