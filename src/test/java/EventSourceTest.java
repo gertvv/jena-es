@@ -19,7 +19,7 @@ import com.hp.hpl.jena.vocabulary.RDF;
 
 import es.DatasetGraphDelta;
 import es.DatasetGraphEventSourcing;
-import es.EventSource2;
+import es.EventSource;
 
 
 public class EventSourceTest {
@@ -67,13 +67,13 @@ public class EventSourceTest {
 	@Test
 	public void testApplyRevision() {
 		Graph base = GraphFactory.createGraphMem();
-		Graph graph = EventSource2.applyRevision(d_dataset, d_logUri, base, d_rev1Uri);
+		Graph graph = EventSource.applyRevision(d_dataset, d_logUri, base, d_rev1Uri);
 		assertTrue(graph.contains(createURI("http://example.com/PeterParker"), RDF.Nodes.type, createURI(FOAF + "Person")));
 		assertTrue(graph.contains(createURI("http://example.com/PeterParker"), createURI(FOAF + "name"), createLiteral("Spiderman")));
 		assertTrue(graph.contains(createURI("http://example.com/PeterParker"), createURI(FOAF + "name"), createLiteral("Peter Parker")));
 		assertEquals(3, graph.size());
 		
-		graph = EventSource2.applyRevision(d_dataset, d_logUri, graph, d_rev3Uri);
+		graph = EventSource.applyRevision(d_dataset, d_logUri, graph, d_rev3Uri);
 		assertTrue(graph.contains(createURI("http://example.com/PeterParker"), RDF.Nodes.type, createURI(FOAF + "Person")));
 		assertTrue(graph.contains(createURI("http://example.com/PeterParker"), createURI(FOAF + "name"), createLiteral("Peter Parker")));
 		assertTrue(graph.contains(createURI("http://example.com/PeterParker"), createURI(FOAF + "homepage"), createURI("http://www.okcupid.com/profile/PeterParker")));
@@ -83,44 +83,44 @@ public class EventSourceTest {
 	@Test
 	public void testApplyEvent() {
 		DatasetGraph ds = DatasetGraphFactory.createMem();
-		ds = EventSource2.applyEvent(d_dataset, d_logUri, ds, d_event1Uri);
+		ds = EventSource.applyEvent(d_dataset, d_logUri, ds, d_event1Uri);
 		checkGraphAfterEvent1(ds);
 		
-		ds = EventSource2.applyEvent(d_dataset, d_logUri, ds, d_event2Uri);
+		ds = EventSource.applyEvent(d_dataset, d_logUri, ds, d_event2Uri);
 		checkGraphAfterEvent2(ds);
 	}
 
 	@Test
 	public void testGetLatestEventURI() {
-		assertEquals(d_event2Uri, EventSource2.getLatestEvent(d_dataset, d_logUri));
+		assertEquals(d_event2Uri, EventSource.getLatestEvent(d_dataset, d_logUri));
 	}
 	
 	@Test
 	public void testGetEventsUntil() {
 		assertEquals(Arrays.asList(new Node[] { d_event2Uri, d_event1Uri}),
-				EventSource2.getEventsUntil(d_dataset, d_logUri, d_event2Uri));
+				EventSource.getEventsUntil(d_dataset, d_logUri, d_event2Uri));
 		assertEquals(Arrays.asList(new Node[] { d_event1Uri}),
-				EventSource2.getEventsUntil(d_dataset, d_logUri, d_event1Uri));
+				EventSource.getEventsUntil(d_dataset, d_logUri, d_event1Uri));
 	}
 	
 	@Test
 	public void testReplayLog() {
 		DatasetGraph ds = DatasetGraphFactory.createMem();
-		ds = EventSource2.replayLogUntil(d_dataset, d_logUri, d_event1Uri);
+		ds = EventSource.replayLogUntil(d_dataset, d_logUri, d_event1Uri);
 		checkGraphAfterEvent1(ds);
 		
-		ds = EventSource2.replayLogUntil(d_dataset, d_logUri, d_event2Uri);
+		ds = EventSource.replayLogUntil(d_dataset, d_logUri, d_event2Uri);
 		checkGraphAfterEvent2(ds);
 	}
 	
 	@Test
 	public void testWriteToLog() {
-		DatasetGraph ds = EventSource2.replayLog(d_dataset, d_logUri);
+		DatasetGraph ds = EventSource.replayLog(d_dataset, d_logUri);
 		DatasetGraphDelta delta = new DatasetGraphDelta(ds);
 		applyGraphMod(delta);
-		EventSource2.writeToLog(d_dataset, d_logUri, delta);
+		EventSource.writeToLog(d_dataset, d_logUri, delta);
 		
-		ds = EventSource2.replayLog(d_dataset, d_logUri);
+		ds = EventSource.replayLog(d_dataset, d_logUri);
 		checkGraphAfterMod(ds);
 	}
 	

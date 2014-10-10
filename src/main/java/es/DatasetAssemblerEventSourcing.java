@@ -15,8 +15,8 @@ import com.hp.hpl.jena.sparql.core.assembler.DatasetAssembler;
 
 
 public class DatasetAssemblerEventSourcing extends DatasetAssembler {
-	public static final Property PROPERTY_SOURCE = ResourceFactory.createProperty(EventSource2.ES, "source");
-	public static final Property PROPERTY_LOG = ResourceFactory.createProperty(EventSource2.ES, "log");
+	public static final Property PROPERTY_SOURCE = ResourceFactory.createProperty(EventSource.ES, "source");
+	public static final Property PROPERTY_LOG = ResourceFactory.createProperty(EventSource.ES, "log");
 
 	@Override
 	public Dataset createDataset(Assembler a, Resource root, Mode mode) {

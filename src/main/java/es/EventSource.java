@@ -23,7 +23,7 @@ import com.hp.hpl.jena.sparql.graph.GraphFactory;
 import com.hp.hpl.jena.vocabulary.RDF;
 
 
-public class EventSource2 {
+public class EventSource {
 	public static final String ES="http://drugis.org/eventSourcing/es#",
 			EVENT="http://drugis.org/eventSourcing/event/",
 			REVISION="http://drugis.org/eventSourcing/revision/",

@@ -74,10 +74,10 @@ public class DatasetGraphEventSourcing extends DatasetGraphTrackActive implement
 	protected void _begin(ReadWrite readWrite) {
 		if (readWrite == ReadWrite.READ) { // read-only: construct a view
 			getTransactional().begin(readWrite.READ);
-			d_txn.set(EventSource2.replayLog(d_eventSource, d_logUri));
+			d_txn.set(EventSource.replayLog(d_eventSource, d_logUri));
 		} else { // read-write
 			getTransactional().begin(readWrite.WRITE);
-			d_txn.set(new DatasetGraphDelta(EventSource2.replayLog(d_eventSource, d_logUri)));
+			d_txn.set(new DatasetGraphDelta(EventSource.replayLog(d_eventSource, d_logUri)));
 		}
 		
 	}
@@ -96,7 +96,7 @@ public class DatasetGraphEventSourcing extends DatasetGraphTrackActive implement
 	@Override
 	protected void _commit() {
 		checkWrite();
-		EventSource2.writeToLog(d_eventSource, d_logUri, (DatasetGraphDelta) d_txn.get());
+		EventSource.writeToLog(d_eventSource, d_logUri, (DatasetGraphDelta) d_txn.get());
 		getTransactional().commit();
 		d_txn.remove();
 	}
@@ -132,6 +132,6 @@ public class DatasetGraphEventSourcing extends DatasetGraphTrackActive implement
 	}
 
 	public DatasetGraph getView(Node event) {
-		return EventSource2.replayLogUntil(d_eventSource, d_logUri, event);
+		return EventSource.replayLogUntil(d_eventSource, d_logUri, event);
 	}
 }

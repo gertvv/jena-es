@@ -8,7 +8,7 @@ import com.hp.hpl.jena.query.DatasetFactory;
 import com.hp.hpl.jena.query.Query;
 
 import es.DatasetGraphEventSourcing;
-import es.EventSource2;
+import es.EventSource;
 
 
 public class EventSourced_QueryDataset extends SPARQL_QueryDataset {
@@ -26,7 +26,7 @@ public class EventSourced_QueryDataset extends SPARQL_QueryDataset {
 		String eventId = action.request.getParameter("event");
 
         if (eventId != null) { // return a specific version
-    		Dataset ds = DatasetFactory.create(dsg.getView(NodeFactory.createURI(EventSource2.EVENT + eventId)));
+    		Dataset ds = DatasetFactory.create(dsg.getView(NodeFactory.createURI(EventSource.EVENT + eventId)));
         	System.err.println("Returning version " + eventId);
     		return ds;
         }
