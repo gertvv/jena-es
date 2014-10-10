@@ -1,5 +1,4 @@
-import static com.hp.hpl.jena.graph.NodeFactory.createLiteral;
-import static com.hp.hpl.jena.graph.NodeFactory.createURI;
+import static com.hp.hpl.jena.graph.NodeFactory.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -11,9 +10,12 @@ import org.junit.Test;
 
 import com.hp.hpl.jena.graph.Graph;
 import com.hp.hpl.jena.graph.Node;
+import com.hp.hpl.jena.graph.NodeFactory;
+import com.hp.hpl.jena.graph.Triple;
 import com.hp.hpl.jena.query.ReadWrite;
 import com.hp.hpl.jena.sparql.core.DatasetGraph;
 import com.hp.hpl.jena.sparql.core.DatasetGraphFactory;
+import com.hp.hpl.jena.sparql.core.DatasetGraphWithLock;
 import com.hp.hpl.jena.sparql.graph.GraphFactory;
 import com.hp.hpl.jena.vocabulary.RDF;
 
@@ -125,8 +127,30 @@ public class EventSourceTest {
 	}
 	
 	@Test
+	public void testWriteToLogWithMetaData() {
+		DatasetGraph ds = EventSource.replayLog(d_dataset, d_logUri);
+		DatasetGraphDelta delta = new DatasetGraphDelta(ds);
+		applyGraphMod(delta);
+		Graph meta = GraphFactory.createGraphMem();
+		Node root = createAnon();
+		meta.add(new Triple(root, RDF.Nodes.type, EventSource.esClassEvent));
+		meta.add(new Triple(root, EventSource.dcCreator, createURI("http://example.com/PeterParker")));
+		Node event = EventSource.writeToLog(d_dataset, d_logUri, delta, meta);
+		ds = EventSource.replayLog(d_dataset, d_logUri);
+		checkGraphAfterMod(ds);
+		assertTrue(d_dataset.contains(d_logUri, event, EventSource.dcCreator, createURI("http://example.com/PeterParker")));
+	}
+
+	@Test
 	public void testTransactionInterface() {
-		DatasetGraphEventSourcing ds = new DatasetGraphEventSourcing(d_dataset, d_logUri);
+		// We assume that the DSG implements Transactional, so fake it
+		DatasetGraph dataset = new DatasetGraphWithLock(d_dataset) {
+			@Override
+			protected void _abort() {
+				_end();
+			}
+		};
+		DatasetGraphEventSourcing ds = new DatasetGraphEventSourcing(dataset, d_logUri);
 
 		ds.begin(ReadWrite.READ);
 		checkGraphAfterEvent2(ds);

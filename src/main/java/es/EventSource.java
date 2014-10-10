@@ -6,20 +6,29 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import java.util.TimeZone;
 import java.util.UUID;
 
 import com.hp.hpl.jena.datatypes.xsd.XSDDatatype;
 import com.hp.hpl.jena.graph.Graph;
+import com.hp.hpl.jena.graph.GraphExtract;
+import com.hp.hpl.jena.graph.GraphUtil;
 import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.graph.NodeFactory;
+import com.hp.hpl.jena.graph.Triple;
+import com.hp.hpl.jena.graph.TripleBoundary;
 import com.hp.hpl.jena.graph.compose.Delta;
 import com.hp.hpl.jena.graph.compose.Difference;
 import com.hp.hpl.jena.graph.compose.Union;
+import com.hp.hpl.jena.rdf.model.Model;
+import com.hp.hpl.jena.rdf.model.ModelFactory;
 import com.hp.hpl.jena.sparql.core.DatasetGraph;
 import com.hp.hpl.jena.sparql.core.DatasetGraphFactory;
 import com.hp.hpl.jena.sparql.core.Quad;
 import com.hp.hpl.jena.sparql.graph.GraphFactory;
+import com.hp.hpl.jena.sparql.util.graph.GraphUtils;
+import com.hp.hpl.jena.util.ResourceUtils;
 import com.hp.hpl.jena.vocabulary.RDF;
 
 
@@ -37,7 +46,9 @@ public class EventSource {
 			esPropertyRevision = NodeFactory.createURI(ES + "has_revision"),
 			esPropertyAssertions = NodeFactory.createURI(ES + "assertions"),
 			esPropertyRetractions = NodeFactory.createURI(ES + "retractions"),
-			dcDate = NodeFactory.createURI("http://purl.org/dc/elements/1.1/date");
+			dcDate = NodeFactory.createURI("http://purl.org/dc/elements/1.1/date"),
+			dcCreator = NodeFactory.createURI("http://purl.org/dc/elements/1.1/creator");
+
 	
 	public static DatasetGraph replayLog(DatasetGraph eventSource, Node log) {
 		return replayLogUntil(eventSource, log, getLatestEvent(eventSource, log));
@@ -131,18 +142,55 @@ public class EventSource {
 	    df.setTimeZone(tz);
 	    String nowAsISO = df.format(new Date());
 	    return nowAsISO;
-	}	
-
+	}
+	
 	/**
 	 * Write an event to the log, assuming it is consistent with the current state.
 	 * @param event The event (changeset).
 	 * @return The ID of the event.
 	 */
 	public static Node writeToLog(DatasetGraph eventSource, Node log, DatasetGraphDelta event) {
+		return writeToLog(eventSource, log, event, GraphFactory.createGraphMem());
+	}
+
+	/**
+	 * Write an event to the log, assuming it is consistent with the current state.
+	 * @param eventSource The DatasetGraph containing the event log.
+	 * @param log The URI of the event log.
+	 * @param event The event (changeset).
+	 * @param meta A graph containing meta-data. It must contain a single blank node of class es:Event, the properties of which will be added to the event meta-data.
+	 * @return The ID of the event.
+	 */
+	public static Node writeToLog(DatasetGraph eventSource, Node log, DatasetGraphDelta event, Graph meta) {
 		Node eventId = NodeFactory.createURI(EVENT + UUID.randomUUID().toString());
 		
 		eventSource.add(log, eventId, RDF.Nodes.type, esClassEvent);
 		eventSource.add(log, eventId, dcDate, NodeFactory.createLiteral(now(), XSDDatatype.XSDdateTime));
+		
+		// If meta-data is supplied, add it to the event log
+		Set<Triple> metaRoots = meta.find(Node.ANY, RDF.Nodes.type, esClassEvent).toSet();
+		if (metaRoots.size() > 1) {
+			throw new IllegalStateException(
+					"The supplied meta-data must have at most one resource of class "
+					+ esClassEvent.getURI() + " but found " + metaRoots.size());
+		} else if (metaRoots.size() == 1) {
+			Node root = metaRoots.iterator().next().getSubject();
+			
+			// Restrict meta-data to describing the current event only
+			meta = (new GraphExtract(TripleBoundary.stopNowhere)).extract(root, meta);
+			
+			// Prevent the setting of predicates we set ourselves
+			meta.remove(root, RDF.Nodes.type, Node.ANY);
+			meta.remove(root, EventSource.esPropertyRevision, Node.ANY);
+			meta.remove(root, EventSource.dcDate, Node.ANY);
+			
+			// Replace the temporary root node by the event URI
+			replaceNode(meta, root, eventId);
+			
+			// Copy the data into the event log
+			GraphUtil.addInto(eventSource.getGraph(log), meta);
+		}
+
 		for (Node graph : event.getModifications().keySet()) {
 			eventSource.add(log, eventId, esPropertyRevision, writeRevision(eventSource, log, event, graph));
 		}
@@ -155,6 +203,14 @@ public class EventSource {
 		eventSource.add(log, log, esPropertyHead, newHead);
 		
 		return eventId;
+	}
+
+	private static void replaceNode(Graph graph, Node oldNode, Node newNode) {
+		for (Iterator<Triple> it = graph.find(oldNode, Node.ANY, Node.ANY); it.hasNext(); ) {
+			Triple triple = it.next();
+			graph.add(new Triple(newNode, triple.getPredicate(), triple.getObject()));
+		}
+		graph.remove(oldNode, Node.ANY, Node.ANY);
 	}
 
 	/**

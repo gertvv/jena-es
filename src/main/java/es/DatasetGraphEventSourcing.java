@@ -23,6 +23,9 @@ public class DatasetGraphEventSourcing extends DatasetGraphTrackActive implement
 
 	public DatasetGraphEventSourcing(DatasetGraph eventSource, Node logUri) {
 		d_eventSource = eventSource;
+		if (!(eventSource instanceof Transactional)) {
+			throw new IllegalArgumentException("DatasetGraphEventSourcing can only be based on a Transactional DatasetGraph");
+		}
 		d_logUri = logUri;
 		d_txn = new ThreadLocal<DatasetGraph>();
 	}
