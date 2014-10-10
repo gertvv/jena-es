@@ -23,6 +23,8 @@ public class EventSourcingFusekiServer extends SPARQLServer {
 			System.err.println("Configuring event sourced dataset");
 			HttpServlet sparqlQuery = new EventSourced_QueryDataset();
 			addServlet(context, "/" + datasetPath, sparqlQuery, dsDesc.query, enableCompression);
+			HttpServlet restRead = new EventSourced_REST_R();
+			addServlet(context, "/" + datasetPath, restRead, dsDesc.readGraphStore, enableCompression);
 		}
 		
 	}

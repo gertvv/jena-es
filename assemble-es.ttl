@@ -23,6 +23,7 @@ es:EventSourcedDataset ja:assembler "es.DatasetAssemblerEventSourcing" ;
   fuseki:serviceUpdate "update" ;
   fuseki:serviceUpload "upload" ;
   fuseki:serviceReadWriteGraphStore "data" ;
+  fuseki:serviceReadGraphStore "read" ;
   fuseki:dataset eg:dataset .
 
 <#service_history> a fuseki:Service ;
