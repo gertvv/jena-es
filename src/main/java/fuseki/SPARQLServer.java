@@ -391,7 +391,7 @@ public class SPARQLServer {
         addServlet(context, staticContent, pathSpec, false) ;
     }
 
-    private void addServlet(ServletContextHandler context, String datasetPath, HttpServlet servlet,
+    protected void addServlet(ServletContextHandler context, String datasetPath, HttpServlet servlet,
                             ServiceRef serviceRef, boolean enableCompression) {
         addServlet(context, datasetPath, servlet, serviceRef.endpoints, enableCompression) ;
     }

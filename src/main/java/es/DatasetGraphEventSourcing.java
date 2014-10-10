@@ -1,5 +1,6 @@
 package es;
 import com.hp.hpl.jena.graph.Node;
+import com.hp.hpl.jena.graph.NodeFactory;
 import com.hp.hpl.jena.query.Dataset;
 import com.hp.hpl.jena.query.DatasetFactory;
 import com.hp.hpl.jena.query.ReadWrite;
@@ -128,5 +129,9 @@ public class DatasetGraphEventSourcing extends DatasetGraphTrackActive implement
 	@Override
 	public void finishRequest() {
 		// NI
+	}
+
+	public DatasetGraph getView(Node event) {
+		return EventSource2.replayLogUntil(d_eventSource, d_logUri, event);
 	}
 }
