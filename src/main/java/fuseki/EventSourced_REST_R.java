@@ -13,8 +13,6 @@ import com.hp.hpl.jena.graph.NodeFactory;
 import com.hp.hpl.jena.sparql.core.DatasetGraph;
 
 import es.DatasetGraphEventSourcing;
-import es.EventSource;
-
 
 public class EventSourced_REST_R extends SPARQL_REST_R {
 	private static final long serialVersionUID = 4361496160143818910L;
@@ -33,7 +31,7 @@ public class EventSourced_REST_R extends SPARQL_REST_R {
 		String eventId = action.request.getParameter("event");
 
         if (eventId != null) { // return a specific version
-    		DatasetGraph dsg = es.getView(NodeFactory.createURI(EventSource.EVENT + eventId));
+    		DatasetGraph dsg = es.getView(NodeFactory.createURI(eventId));
         	System.err.println("Returning version " + eventId);
     		return dsg;
         }
