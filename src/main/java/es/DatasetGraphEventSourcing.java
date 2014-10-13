@@ -1,6 +1,6 @@
 package es;
+import com.hp.hpl.jena.graph.Graph;
 import com.hp.hpl.jena.graph.Node;
-import com.hp.hpl.jena.graph.NodeFactory;
 import com.hp.hpl.jena.query.Dataset;
 import com.hp.hpl.jena.query.DatasetFactory;
 import com.hp.hpl.jena.query.ReadWrite;
@@ -9,6 +9,7 @@ import com.hp.hpl.jena.sparql.JenaTransactionException;
 import com.hp.hpl.jena.sparql.core.DatasetGraph;
 import com.hp.hpl.jena.sparql.core.DatasetGraphTrackActive;
 import com.hp.hpl.jena.sparql.core.Transactional;
+import com.hp.hpl.jena.sparql.graph.GraphFactory;
 import com.hp.hpl.jena.sparql.util.Context;
 import com.hp.hpl.jena.update.GraphStore;
 
@@ -17,9 +18,19 @@ import com.hp.hpl.jena.update.GraphStore;
  */
 public class DatasetGraphEventSourcing extends DatasetGraphTrackActive implements GraphStore {
 	
+	private class Transaction {
+		public DatasetGraph dsg;
+		public Graph meta;
+		
+		public Transaction(DatasetGraph dsg) {
+			this.dsg = dsg;
+			this.meta = GraphFactory.createGraphMem();
+		}
+	}
+	
 	private DatasetGraph d_eventSource;
 	private Node d_logUri;
-	private ThreadLocal<DatasetGraph> d_txn;
+	private ThreadLocal<Transaction> d_txn;
 
 	public DatasetGraphEventSourcing(DatasetGraph eventSource, Node logUri) {
 		d_eventSource = eventSource;
@@ -27,7 +38,7 @@ public class DatasetGraphEventSourcing extends DatasetGraphTrackActive implement
 			throw new IllegalArgumentException("DatasetGraphEventSourcing can only be based on a Transactional DatasetGraph");
 		}
 		d_logUri = logUri;
-		d_txn = new ThreadLocal<DatasetGraph>();
+		d_txn = new ThreadLocal<Transaction>();
 	}
 	
 	@Override
@@ -48,7 +59,7 @@ public class DatasetGraphEventSourcing extends DatasetGraphTrackActive implement
 	@Override
 	protected DatasetGraph get() {
 		if (isInTransaction()) {
-			return d_txn.get();
+			return d_txn.get().dsg;
 		}
 		throw new IllegalAccessError("Not in a transaction");
 	}
@@ -72,15 +83,20 @@ public class DatasetGraphEventSourcing extends DatasetGraphTrackActive implement
 	public boolean isInTransaction() {
 		return d_txn.get() != null;
 	}
+	
+	public Graph getTransactionMetaGraph() {
+		checkActive();
+		return d_txn.get().meta;
+	}
 
 	@Override
 	protected void _begin(ReadWrite readWrite) {
 		if (readWrite == ReadWrite.READ) { // read-only: construct a view
-			getTransactional().begin(readWrite.READ);
-			d_txn.set(EventSource.replayLog(d_eventSource, d_logUri));
+			getTransactional().begin(ReadWrite.READ);
+			d_txn.set(new Transaction(EventSource.replayLog(d_eventSource, d_logUri)));
 		} else { // read-write
-			getTransactional().begin(readWrite.WRITE);
-			d_txn.set(new DatasetGraphDelta(EventSource.replayLog(d_eventSource, d_logUri)));
+			getTransactional().begin(ReadWrite.WRITE);
+			d_txn.set(new Transaction(new DatasetGraphDelta(EventSource.replayLog(d_eventSource, d_logUri))));
 		}
 		
 	}
@@ -91,7 +107,7 @@ public class DatasetGraphEventSourcing extends DatasetGraphTrackActive implement
 	
 	private void checkWrite() {
 		checkActive();
-		if (!(d_txn.get() instanceof DatasetGraphDelta)) {
+		if (!(d_txn.get().dsg instanceof DatasetGraphDelta)) {
 			throw new JenaTransactionException("Operation not applicable to read-only transaction");
 		}
 	}
@@ -99,7 +115,7 @@ public class DatasetGraphEventSourcing extends DatasetGraphTrackActive implement
 	@Override
 	protected void _commit() {
 		checkWrite();
-		EventSource.writeToLog(d_eventSource, d_logUri, (DatasetGraphDelta) d_txn.get());
+		EventSource.writeToLog(d_eventSource, d_logUri, (DatasetGraphDelta) d_txn.get().dsg, d_txn.get().meta);
 		getTransactional().commit();
 		d_txn.remove();
 	}
