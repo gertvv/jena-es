@@ -21,4 +21,4 @@ Building and running
 
 To build, use maven, either `mvn compile` or `mvn test`.
 
-To run the Fuseki server, run the `my-fuseki.sh` script. It requires `$FUSEKI_HOME` to be set to the location of a Fuseki installation (fuseki-1.1.1 was in use at the time of writing).
+To run the Fuseki server, build a jar with dependencies using `mvn install` and run the `my-fuseki.sh` script. It requires `$FUSEKI_HOME` to be set to the location of a Fuseki installation (fuseki-1.1.1 was in use at the time of writing).
