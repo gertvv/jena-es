@@ -22,19 +22,14 @@ import com.hp.hpl.jena.graph.compose.Delta;
 import com.hp.hpl.jena.graph.compose.Difference;
 import com.hp.hpl.jena.graph.compose.Union;
 import com.hp.hpl.jena.query.ReadWrite;
-import com.hp.hpl.jena.rdf.model.Model;
-import com.hp.hpl.jena.rdf.model.ModelFactory;
-import com.hp.hpl.jena.rdf.model.Property;
 import com.hp.hpl.jena.sparql.core.DatasetGraph;
 import com.hp.hpl.jena.sparql.core.DatasetGraphFactory;
 import com.hp.hpl.jena.sparql.core.Quad;
 import com.hp.hpl.jena.sparql.core.Transactional;
 import com.hp.hpl.jena.sparql.graph.GraphFactory;
-import com.hp.hpl.jena.sparql.util.graph.GraphUtils;
-import com.hp.hpl.jena.util.ResourceUtils;
 import com.hp.hpl.jena.vocabulary.RDF;
 
-
+@SuppressWarnings("deprecation")
 public class EventSource {
 	public static final String ES="http://drugis.org/eventSourcing/es#",
 			EVENT="http://drugis.org/eventSourcing/event/",
@@ -120,7 +115,6 @@ public class EventSource {
 	}
 
 	public static DatasetGraph applyEvent(DatasetGraph eventSource, Node log, DatasetGraph base, Node event) {
-		DatasetGraph ds = DatasetGraphFactory.create(base);
 		for (Iterator<Quad> quads = eventSource.find(log, event, esPropertyRevision, Node.ANY); quads.hasNext(); ) {
 			Node revision = quads.next().getObject();
 			Node graphName = getUniqueObject(eventSource.find(log, revision, esPropertyGraph, Node.ANY));

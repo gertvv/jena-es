@@ -53,6 +53,7 @@ import com.hp.hpl.jena.sparql.util.Utils ;
  * instances of {@link org.apache.jena.fuseki.server.ServerConfig}.
  *
  */
+@SuppressWarnings("all")
 public class SPARQLServer {
     static {
         Fuseki.init() ;
