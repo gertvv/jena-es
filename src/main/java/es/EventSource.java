@@ -41,7 +41,8 @@ public class EventSource {
 			REVISION="http://drugis.org/eventSourcing/revision/",
 			ASSERT="http://drugis.org/eventSourcing/assert/",
 			RETRACT="http://drugis.org/eventSourcing/retract/";
-	public static final Node esClassLog = NodeFactory.createURI(ES + "Log"),
+	public static final Node esClassDataset = NodeFactory.createURI(ES + "EventSourcedDataset"),
+			esClassLog = NodeFactory.createURI(ES + "Log"),
 			esClassEvent = NodeFactory.createURI(ES + "Event"),
 			esClassRevision = NodeFactory.createURI(ES + "Revision"),
 			esPropertyHead = NodeFactory.createURI(ES + "head"),
