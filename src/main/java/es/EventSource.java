@@ -21,11 +21,14 @@ import com.hp.hpl.jena.graph.TripleBoundary;
 import com.hp.hpl.jena.graph.compose.Delta;
 import com.hp.hpl.jena.graph.compose.Difference;
 import com.hp.hpl.jena.graph.compose.Union;
+import com.hp.hpl.jena.query.ReadWrite;
 import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.rdf.model.ModelFactory;
+import com.hp.hpl.jena.rdf.model.Property;
 import com.hp.hpl.jena.sparql.core.DatasetGraph;
 import com.hp.hpl.jena.sparql.core.DatasetGraphFactory;
 import com.hp.hpl.jena.sparql.core.Quad;
+import com.hp.hpl.jena.sparql.core.Transactional;
 import com.hp.hpl.jena.sparql.graph.GraphFactory;
 import com.hp.hpl.jena.sparql.util.graph.GraphUtils;
 import com.hp.hpl.jena.util.ResourceUtils;
@@ -67,7 +70,7 @@ public class EventSource {
 	
 	public static Node getLatestEvent(DatasetGraph eventSource, Node log) {
 		Node head = getUniqueObject(eventSource.find(log, log, esPropertyHead, Node.ANY));
-		return getUniqueObject(eventSource.find(log, head, RDF.Nodes.first, Node.ANY));
+		return getUniqueOptionalObject(eventSource.find(log, head, RDF.Nodes.first, Node.ANY));
 	}
 	
 	/**
@@ -96,7 +99,7 @@ public class EventSource {
 		return list;
 	}
 	
-	private static Node getUniqueObject(Iterator<Quad> result) {
+	private static Node getUniqueOptionalObject(Iterator<Quad> result) {
 		if (result.hasNext()) {
 			Node object = result.next().getObject();
 			if (result.hasNext()) {
@@ -104,7 +107,15 @@ public class EventSource {
 			}
 			return object;
 		}
-		throw new IllegalStateException("Zero subjects on property of arity 1");
+		return null;
+	}
+	
+	private static Node getUniqueObject(Iterator<Quad> result) {
+		Node object = getUniqueOptionalObject(result);
+		if (object == null) {
+			throw new IllegalStateException("Zero subjects on property of arity 1");
+		}
+		return object;
 	}
 
 	public static DatasetGraph applyEvent(DatasetGraph eventSource, Node log, DatasetGraph base, Node event) {
@@ -236,5 +247,23 @@ public class EventSource {
 		}
 
 		return revisionId;
+	}
+
+	public static void createLogIfNotExists(DatasetGraph eventSource, Node log) {
+		Transactional trans = (Transactional) eventSource;
+
+		trans.begin(ReadWrite.READ);
+		boolean logExists = eventSource.containsGraph(log);
+		trans.end();
+
+		if (!logExists) {
+			trans.begin(ReadWrite.WRITE);
+			Graph graph = GraphFactory.createGraphMem();
+			graph.add(new Triple(log, RDF.Nodes.type, esClassLog));
+			graph.add(new Triple(log, esPropertyHead, RDF.Nodes.nil));
+			eventSource.addGraph(log, graph);
+			trans.commit();
+		}
+
 	}
 }
