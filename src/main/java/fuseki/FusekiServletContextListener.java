@@ -21,22 +21,16 @@ import javax.servlet.ServletContextEvent ;
 import javax.servlet.ServletContextListener ;
 
 public class FusekiServletContextListener implements ServletContextListener {
-    // This could do the initialization. 
-    private final SPARQLServer sparqlServer ;
+
     public FusekiServletContextListener(SPARQLServer sparqlServer) {
-        this.sparqlServer = sparqlServer ;
     }
 
     @Override
     public void contextInitialized(ServletContextEvent sce) {
-//        Fuseki.serverLog.info("contextInitialized") ;
-//        for ( DatasetRef dsRef : sparqlServer.getDatasets() )
-//            Fuseki.serverLog.info("Dataset: "+dsRef.getName()) ;
     }
 
     @Override
     public void contextDestroyed(ServletContextEvent sce) {
-//        Fuseki.serverLog.info("contextDestroyed") ;
     }
 }
 

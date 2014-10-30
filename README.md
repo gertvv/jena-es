@@ -14,7 +14,7 @@ However, a number of features do require modifications to Fuseki and the HTTP AP
  - Returning the event ID to the client after a change has been committed.
 
 These are cumbersome to implement as Fuseki was clearly not intended for such modifications.
-Access to prior versions is controlled using the ?version=$URI parameter, and the latter two use cases are not yet implemented.
+Access to prior versions is controlled using the ?event=$URI parameter, and the latter two use cases are not yet implemented.
 
 Building and running
 --------------------

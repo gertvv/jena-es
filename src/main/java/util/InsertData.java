@@ -1,28 +1,21 @@
 package util;
 
-import java.io.InputStream;
 import java.util.Iterator;
 
-import org.apache.jena.atlas.io.IO;
-import org.apache.jena.atlas.lib.FileOps;
-import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
-import org.apache.jena.riot.RDFLanguages;
+
+import arq.cmd.CmdException;
+import arq.cmdline.ArgDecl;
+import arq.cmdline.CmdARQ;
 
 import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.query.Dataset;
 import com.hp.hpl.jena.query.ReadWrite;
 import com.hp.hpl.jena.sparql.core.DatasetGraph;
-import com.hp.hpl.jena.sparql.core.DatasetGraphFactory;
 import com.hp.hpl.jena.sparql.core.Transactional;
 import com.hp.hpl.jena.sparql.core.assembler.AssemblerUtils;
 
 import es.EventSource;
-import fuseki.FusekiCmd;
-import arq.cmd.CmdException;
-import arq.cmdline.ArgDecl;
-import arq.cmdline.CmdARQ;
-import arq.cmdline.ModDatasetAssembler;
 
 public class InsertData extends CmdARQ {
     ArgDecl assemblerDescArg = new ArgDecl(ArgDecl.HasValue, "desc", "dataset") ;

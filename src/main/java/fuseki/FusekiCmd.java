@@ -53,6 +53,7 @@ import com.hp.hpl.jena.tdb.TDBFactory ;
 import com.hp.hpl.jena.tdb.sys.Names ;
 import com.hp.hpl.jena.tdb.transaction.TransactionManager ;
 
+@SuppressWarnings("all")
 public class FusekiCmd extends CmdARQ
 {
     private static String log4Jsetup = StrUtils.strjoinNL(
