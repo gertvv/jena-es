@@ -10,9 +10,12 @@ import org.apache.jena.fuseki.servlets.HttpAction;
 import org.apache.jena.fuseki.servlets.SPARQL_REST_R;
 
 import com.hp.hpl.jena.graph.NodeFactory;
+import com.hp.hpl.jena.query.Dataset;
+import com.hp.hpl.jena.query.DatasetFactory;
 import com.hp.hpl.jena.sparql.core.DatasetGraph;
 
 import es.DatasetGraphEventSourcing;
+import es.EventSource.EventNotFoundException;
 
 public class EventSourced_REST_R extends SPARQL_REST_R {
 	private static final long serialVersionUID = 4361496160143818910L;
@@ -22,7 +25,7 @@ public class EventSourced_REST_R extends SPARQL_REST_R {
 		DatasetGraph dsg = getDatasetGraph(action);
 		DatasetRef desc = new DatasetRef();
 		desc.dataset = dsg;
-		action.setDataset(desc);		
+		action.setDataset(desc);
 		super.doGet(action);
 	}
 
@@ -31,9 +34,14 @@ public class EventSourced_REST_R extends SPARQL_REST_R {
 		String eventId = action.request.getParameter("event");
 
         if (eventId != null) { // return a specific version
-    		DatasetGraph dsg = es.getView(NodeFactory.createURI(eventId));
+        	DatasetGraph dsg = null;
+        	try {
+        		dsg = es.getView(NodeFactory.createURI(eventId));
+        	} catch (EventNotFoundException e) {
+        		errorNotFound(e.getMessage());
+        	}
         	System.err.println("Returning version " + eventId);
-    		return dsg;
+        	return dsg;
         }
         
         System.err.println("Returning version CURRENT");

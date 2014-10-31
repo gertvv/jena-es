@@ -48,6 +48,13 @@ public class EventSource {
 			dcDate = NodeFactory.createURI("http://purl.org/dc/elements/1.1/date"),
 			dcCreator = NodeFactory.createURI("http://purl.org/dc/elements/1.1/creator");
 
+	public static class EventNotFoundException extends RuntimeException {
+		private static final long serialVersionUID = -1603163798182523814L;
+		
+		public EventNotFoundException(String message) {
+			super(message);
+		}
+	}
 	
 	public static DatasetGraph replayLog(DatasetGraph eventSource, Node log) {
 		return replayLogUntil(eventSource, log, getLatestEvent(eventSource, log));
@@ -90,6 +97,10 @@ public class EventSource {
 				list.add(el);
 			}
 			current = getUniqueObject(eventSource.find(log, current, RDF.Nodes.rest, Node.ANY));
+		}
+		
+		if (!seen) {
+			throw new EventNotFoundException("The event " + event + " could not be found.");
 		}
 
 		return list;

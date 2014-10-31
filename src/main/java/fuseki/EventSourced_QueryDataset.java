@@ -8,6 +8,7 @@ import com.hp.hpl.jena.query.DatasetFactory;
 import com.hp.hpl.jena.query.Query;
 
 import es.DatasetGraphEventSourcing;
+import es.EventSource.EventNotFoundException;
 
 public class EventSourced_QueryDataset extends SPARQL_QueryDataset {
 	private static final long serialVersionUID = -6181438945345103279L;
@@ -24,7 +25,12 @@ public class EventSourced_QueryDataset extends SPARQL_QueryDataset {
 		String eventId = action.request.getParameter("event");
 
         if (eventId != null) { // return a specific version
-    		Dataset ds = DatasetFactory.create(dsg.getView(NodeFactory.createURI(eventId)));
+        	Dataset ds = null;
+        	try {
+        		ds = DatasetFactory.create(dsg.getView(NodeFactory.createURI(eventId)));
+        	} catch (EventNotFoundException e) {
+        		errorNotFound(e.getMessage());
+        	}
         	System.err.println("Returning version " + eventId);
     		return ds;
         }
