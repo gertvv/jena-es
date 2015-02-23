@@ -3,6 +3,8 @@ package org.drugis.rdf.versioning.server;
 import java.util.Collections;
 import java.util.Map;
 
+import javax.servlet.http.HttpServletResponse;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -27,7 +29,8 @@ public class GraphStoreController {
 	@ResponseBody
 	public Graph get(
 			@RequestParam Map<String,String> params,
-			@RequestHeader(value="X-Accept-EventSource-Version", required=false) String version) {
+			@RequestHeader(value="X-Accept-EventSource-Version", required=false) String version,
+			HttpServletResponse response) {
 		if (params.keySet().equals(Collections.singleton("default")) && params.get("default").equals("")) {
 			return null;
 		} else if (params.keySet().equals(Collections.singleton("graph"))) {
@@ -36,9 +39,12 @@ public class GraphStoreController {
 			Graph rval;
 			if (version == null) {
 				rval = dataset.getGraph(graphNode);
+				version = dataset.getLatestEvent().getURI();
 			} else {
 				rval = dataset.getView(NodeFactory.createURI(version)).getGraph(graphNode);
 			}
+			response.setHeader("X-EventSource-Version", version);
+			response.setHeader("Vary", "Accept, X-Accept-EventSource-Version");
 			dataset.end();
 			return rval;
 		} else {

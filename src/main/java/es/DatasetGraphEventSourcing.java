@@ -41,6 +41,10 @@ public class DatasetGraphEventSourcing extends DatasetGraphTrackActive implement
 		d_txn = new ThreadLocal<Transaction>();
 	}
 	
+	public Node getLatestEvent() {
+		return EventSource.getLatestEvent(d_eventSource, d_logUri);
+	}
+	
 	@Override
 	public Lock getLock() {
 		return d_eventSource.getLock(); // assuming it is SWMR
@@ -76,7 +80,6 @@ public class DatasetGraphEventSourcing extends DatasetGraphTrackActive implement
 		if (isInTransaction()) {
 			throw new JenaTransactionException("Already in a transaction");
 		}
-		
 	}
 
 	@Override
