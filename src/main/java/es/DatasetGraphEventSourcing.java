@@ -1,4 +1,7 @@
 package es;
+import java.util.Observable;
+import java.util.Observer;
+
 import com.hp.hpl.jena.graph.Graph;
 import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.query.Dataset;
@@ -18,13 +21,18 @@ import com.hp.hpl.jena.update.GraphStore;
  */
 public class DatasetGraphEventSourcing extends DatasetGraphTrackActive implements GraphStore {
 	
-	private class Transaction {
+	private class Transaction extends Observable {
 		public DatasetGraph dsg;
 		public Graph meta;
 		
 		public Transaction(DatasetGraph dsg) {
 			this.dsg = dsg;
 			this.meta = GraphFactory.createGraphMem();
+		}
+		
+		public void notifyVersion(Node version) {
+			setChanged();
+			notifyObservers(version);
 		}
 	}
 	
@@ -91,6 +99,11 @@ public class DatasetGraphEventSourcing extends DatasetGraphTrackActive implement
 		checkActive();
 		return d_txn.get().meta;
 	}
+	
+	public void addCommitListener(Observer o) {
+		checkWrite();
+		d_txn.get().addObserver(o);
+	}
 
 	@Override
 	protected void _begin(ReadWrite readWrite) {
@@ -118,8 +131,9 @@ public class DatasetGraphEventSourcing extends DatasetGraphTrackActive implement
 	@Override
 	protected void _commit() {
 		checkWrite();
-		EventSource.writeToLog(d_eventSource, d_logUri, (DatasetGraphDelta) d_txn.get().dsg, d_txn.get().meta);
+		Node version = EventSource.writeToLog(d_eventSource, d_logUri, (DatasetGraphDelta) d_txn.get().dsg, d_txn.get().meta);
 		getTransactional().commit();
+		d_txn.get().notifyVersion(version);
 		d_txn.remove();
 	}
 

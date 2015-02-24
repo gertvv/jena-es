@@ -97,3 +97,19 @@ curl -H "Content-Type: application/sparql-update" -D invalid-update.txt \
 curl -H "X-Accept-EventSource-Version: $V1" -H "Content-Type: application/sparql-update" -D update-old.txt \
   --data "INSERT DATA { <a> <b> <c> }" $UPDATE
 
+# Insert some data
+
+function extract {
+  grep "X-EventSource-Version: " | sed 's/X-EventSource-Version: //'
+}
+
+LATEST=$(curl -s -D - -H "Accept: text/turtle" $DATA?graph=$GRAPH -o /dev/null | extract)
+
+curl -H "X-Accept-EventSource-Version: $LATEST" -H "Content-Type: application/sparql-update" -D update-new.txt \
+  --data "INSERT DATA { GRAPH <http://example.com/> { <a> <b> <c> } }" $UPDATE
+
+UPDATED=$(extract <update-new.txt)
+
+curl -H "Accept: text/turtle" -H "X-Accept-EventSource-Version: $LATEST" $DATA?graph=http://example.com/
+curl -H "Accept: text/turtle" -H "X-Accept-EventSource-Version: $UPDATED" $DATA?graph=http://example.com/
+
