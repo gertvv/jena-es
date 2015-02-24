@@ -76,7 +76,8 @@ public class JenaGraphMessageConverter extends AbstractHttpMessageConverter<Grap
 	}
 
 	private Lang determineRDFLang(HttpHeaders headers) {
-		String ct = headers.getContentType().toString();
-		return RDFLanguages.contentTypeToLang(ct);
+		MediaType mediaType = headers.getContentType();
+		mediaType = new MediaType(mediaType.getType(), mediaType.getSubtype()); // strip all information not understood by RDFLanguages
+		return RDFLanguages.contentTypeToLang(mediaType.toString());
 	}
 }

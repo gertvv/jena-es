@@ -113,3 +113,15 @@ UPDATED=$(extract <update-new.txt)
 curl -H "Accept: text/turtle" -H "X-Accept-EventSource-Version: $LATEST" $DATA?graph=http://example.com/
 curl -H "Accept: text/turtle" -H "X-Accept-EventSource-Version: $UPDATED" $DATA?graph=http://example.com/
 
+curl -s -D - -X PUT -H "Content-Type: text/turtle" -H "X-Accept-EventSource-Version: $UPDATED" \
+  --data "<a> <b> <d>" $DATA?graph=http://example.com/
+
+curl -H "Accept: text/turtle" $DATA?graph=http://example.com/
+
+curl -s -D - -X POST -H "Content-Type: text/turtle" --data "<a> <b> <e>" $DATA?graph=http://example.com/
+
+curl -H "Accept: text/turtle" $DATA?graph=http://example.com/
+
+curl -s -D - -X DELETE $DATA?graph=http://example.com/
+
+curl -I -H "Accept: text/turtle" $DATA?graph=http://example.com/

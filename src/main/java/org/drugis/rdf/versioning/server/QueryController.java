@@ -28,7 +28,7 @@ import es.DatasetGraphEventSourcing;
 public class QueryController {
 	@Autowired DatasetGraphEventSourcing dataset;
 
-	@RequestMapping(method=RequestMethod.GET)
+	@RequestMapping(method={RequestMethod.GET, RequestMethod.HEAD})
 	@ResponseBody
 	public Object query(
 			@RequestParam String query,

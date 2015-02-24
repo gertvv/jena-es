@@ -7,6 +7,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import com.hp.hpl.jena.graph.Graph;
+import com.hp.hpl.jena.graph.GraphUtil;
 import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.graph.NodeFactory;
 import com.hp.hpl.jena.query.ReadWrite;
@@ -25,28 +27,112 @@ import es.DatasetGraphEventSourcing;
 public class GraphStoreController {
 	@Autowired DatasetGraphEventSourcing dataset;
 
-	@RequestMapping(method=RequestMethod.GET)
+	@RequestMapping(method={RequestMethod.GET, RequestMethod.HEAD})
 	@ResponseBody
 	public Graph get(
 			@RequestParam Map<String,String> params,
 			@RequestHeader(value="X-Accept-EventSource-Version", required=false) String version,
 			HttpServletResponse response) {
-		if (params.keySet().equals(Collections.singleton("default")) && params.get("default").equals("")) {
-			return null;
-		} else if (params.keySet().equals(Collections.singleton("graph"))) {
-			Node graphNode = NodeFactory.createURI(params.get("graph"));
-			dataset.begin(ReadWrite.READ);
-			Graph rval;
-			if (version == null) {
-				rval = dataset.getGraph(graphNode);
-				version = dataset.getLatestEvent().getURI();
-			} else {
-				rval = dataset.getView(NodeFactory.createURI(version)).getGraph(graphNode);
+		Node graph = NodeFactory.createURI(determineTargetGraph(params).getUri());
+		dataset.begin(ReadWrite.READ);
+		Graph rval;
+		if (version == null) {
+			rval = dataset.getGraph(graph);
+			version = dataset.getLatestEvent().getURI();
+		} else {
+			rval = dataset.getView(NodeFactory.createURI(version)).getGraph(graph);
+		}
+		dataset.end();
+		response.setHeader("X-EventSource-Version", version);
+		response.setHeader("Vary", "Accept, X-Accept-EventSource-Version");
+		return rval;
+	}
+	
+	@RequestMapping(method=RequestMethod.PUT)
+	public void put(
+			@RequestParam Map<String,String> params,
+			@RequestHeader(value="X-Accept-EventSource-Version", required=false) String version,
+			final @RequestBody Graph graph,
+			HttpServletResponse response) {
+		final Node target = NodeFactory.createURI(determineTargetGraph(params).getUri());
+		Runnable action = new Runnable() {
+			@Override
+			public void run() {
+				dataset.addGraph(target, graph);
 			}
-			response.setHeader("X-EventSource-Version", version);
-			response.setHeader("Vary", "Accept, X-Accept-EventSource-Version");
-			dataset.end();
-			return rval;
+		};
+		String newVersion = Util.runReturningVersion(dataset, version, action);
+		response.setHeader("X-EventSource-Version", newVersion);
+	}
+
+	@RequestMapping(method=RequestMethod.POST)
+	public void post(
+			@RequestParam Map<String,String> params,
+			@RequestHeader(value="X-Accept-EventSource-Version", required=false) String version,
+			final @RequestBody Graph graph,
+			HttpServletResponse response) {
+		final Node target = NodeFactory.createURI(determineTargetGraph(params).getUri());
+		Runnable action = new Runnable() {
+			@Override
+			public void run() {
+				GraphUtil.addInto(dataset.getGraph(target), graph);
+			}
+		};
+		String newVersion = Util.runReturningVersion(dataset, version, action);
+		response.setHeader("X-EventSource-Version", newVersion);
+	}
+
+	@RequestMapping(method=RequestMethod.DELETE)
+	public void delete(
+			@RequestParam Map<String,String> params,
+			@RequestHeader(value="X-Accept-EventSource-Version", required=false) String version,
+			HttpServletResponse response) {
+		final Node target = NodeFactory.createURI(determineTargetGraph(params).getUri());
+		Runnable action = new Runnable() {
+			@Override
+			public void run() {
+				dataset.removeGraph(target);
+			}
+		};
+		String newVersion = Util.runReturningVersion(dataset, version, action);
+		response.setHeader("X-EventSource-Version", newVersion);
+	}
+	
+	static class TargetGraph {
+		public String getUri() {
+			return null;
+		}
+		public boolean isDefault() {
+			return false;
+		}
+	}
+	
+	static class DefaultGraph extends TargetGraph {
+		@Override
+		public boolean isDefault() {
+			return true;
+		}
+	}
+	
+	static class NamedGraph extends TargetGraph {
+		private String d_uri;
+
+		public NamedGraph(String uri) {
+			d_uri = uri;
+		}
+		
+		@Override
+		public String getUri() {
+			return d_uri;
+		}
+	}
+	
+	private static TargetGraph determineTargetGraph(Map<String, String> params) {
+		if (params.keySet().equals(Collections.singleton("default")) && params.get("default").equals("")) {
+			throw new NotImplementedException("Accessing default graph not (yet) implemented");
+			//return new DefaultGraph();
+		} else if (params.keySet().equals(Collections.singleton("graph"))) {
+			return new NamedGraph(params.get("graph"));
 		} else {
 			throw new InvalidGraphSpecificationException();
 		}
