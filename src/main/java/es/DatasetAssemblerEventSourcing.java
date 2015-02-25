@@ -30,7 +30,7 @@ public class DatasetAssemblerEventSourcing extends DatasetAssembler {
 		DatasetGraph eventSource = ((Dataset) a.open(a, getRequiredResource(root, PROPERTY_SOURCE), mode)).asDatasetGraph();
 		Resource log = getRequiredResource(root, PROPERTY_LOG);
 		
-		EventSource.createLogIfNotExists(eventSource, log.asNode()); // Automatically create log if needed
+		EventSource.createDatasetIfNotExists(eventSource, log.asNode()); // Automatically create log if needed
 		DatasetGraph dsg = new DatasetGraphEventSourcing(eventSource, log.asNode());
 
         AssemblerUtils.setContext(root, dsg.getContext());

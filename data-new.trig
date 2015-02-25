@@ -1,0 +1,102 @@
+@prefix dcterms:   <http://purl.org/dc/elements/1.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+
+@prefix es: <http://drugis.org/eventSourcing/es#> .
+
+@prefix dataset: <http://example.com/datasets/> .
+@prefix version: <http://example.com/versions/> .
+@prefix revision: <http://example.com/revisions/> .
+@prefix assert: <http://example.com/assertions/> .
+@prefix retract: <http://example.com/retractions/> .
+
+dataset:qmk2x16nz1 a es:Dataset ;
+  dcterms:date "2014-09-24T12:49:18+0000"^^xsd:dateTime ;
+  dcterms:creator <http://example.com/Spiderman> ;
+  es:head version:g05ri5qvvq .
+
+dataset:ubb245f8sz a es:Dataset ;
+  dcterms:date "2014-09-24T12:40:03+0000"^^xsd:dateTime ;
+  dcterms:creator <http://example.com/GreenGoblin> ;
+  es:head version:7wi4xglx1c .
+
+version:g05ri5qvvq a es:DatasetVersion ;
+  dcterms:date "2014-09-24T12:58:16,835290832+0000"^^xsd:dateTime ;
+  dcterms:creator <http://example.com/Spiderman> ;
+  dcterms:title "The Green Goblin is a liar!" ;
+  es:previous version:f98gj2sgsn ;
+  es:graph_revision [
+    es:graph <http://example.com/Spiderman> ;
+    es:revision revision:302431f4-43e8-11e4-8745-c72e64fa66b1
+  ] ;
+  es:graph_revision [
+    es:graph <http://example.com/PeterParker> ;
+    es:revision revision:44ea0618-43e8-11e4-bcfb-bba47531d497
+  ] .
+
+version:f98gj2sgsn a es:DatasetVersion ;
+  dcterms:date "2014-09-24T12:56:27+0000"^^xsd:dateTime ;
+  dcterms:creator <http://example.com/Spiderman> ;
+  dcterms:title "Copy GreenGoblin/Spiderman" ;
+  es:merged version:7wi4xglx1c ;
+  es:mergeType es:MergeCopyTheirs ;
+  es:graph_revision [
+    es:graph <http://example.com/PeterParker> ;
+    es:revision revision:38fc1de7a-43ea-11e4-a12c-3314171ce0bb
+  ] .
+
+version:7wi4xglx1c a es:DatasetVersion ;
+  dcterms:date "2014-09-24T12:45:25,048366032+0000"^^xsd:dateTime ;
+  dcterms:creator <http://example.com/GreenGoblin> ;
+  dcterms:title "Peter Parker is Spiderman" ;
+  dcterms:description "It is time the world knew...\nThat Peter Parker is Spiderman!" ;
+  es:previous version:3ucq3j5c7u ;
+  es:graph_revision [
+    es:graph <http://example.com/PeterParker> ;
+    es:revision revision:38fc1de7a-43ea-11e4-a12c-3314171ce0bb
+  ] .
+
+version:3ucq3j5c7u a es:DatasetVersion ;
+  dcterms:date "2014-09-24T12:40:03+0000"^^xsd:dateTime ;
+  dcterms:creator <http://example.com/GreenGoblin> ;
+  dcterms:title "Initial version" .
+
+revision:302431f4-43e8-11e4-8745-c72e64fa66b1 a es:Revision ;
+  es:version version:g05ri5qvvq ;
+  es:assertions assert:302431f4-43e8-11e4-8745-c72e64fa66b1 .
+
+revision:44ea0618-43e8-11e4-bcfb-bba47531d497 a es:Revision ;
+  es:version version:g05ri5qvvq ;
+  es:previous revision:38fc1de7a-43ea-11e4-a12c-3314171ce0bb ;
+  es:assertions assert:44ea0618-43e8-11e4-bcfb-bba47531d497 ;
+  es:retractions retract:44ea0618-43e8-11e4-bcfb-bba47531d497 .
+
+revision:38fc1de7a-43ea-11e4-a12c-3314171ce0bb a es:Revision ;
+  es:version version:7wi4xglx1c ;
+  es:assertions assert:844908ec-43eb-11e4-ac51-6b523949084e .
+
+assert:844908ec-43eb-11e4-ac51-6b523949084e {
+
+  <http://example.com/PeterParker> a foaf:Person ;
+    foaf:name "Peter Parker", "Spiderman" .
+
+}
+
+retract:44ea0618-43e8-11e4-bcfb-bba47531d497 {
+
+  <http://example.com/PeterParker> foaf:name "Spiderman" .
+
+}
+
+assert:44ea0618-43e8-11e4-bcfb-bba47531d497 {
+
+  <http://example.com/PeterParker> foaf:homepage <http://www.okcupid.com/profile/PeterParker> .
+
+}
+
+assert:302431f4-43e8-11e4-8745-c72e64fa66b1 {
+
+  <http://example.com/Spiderman> a foaf:Person;
+    foaf:name "Spiderman" .
+
+}

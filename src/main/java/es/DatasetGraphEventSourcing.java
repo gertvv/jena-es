@@ -37,7 +37,7 @@ public class DatasetGraphEventSourcing extends DatasetGraphTrackActive implement
 	}
 	
 	private DatasetGraph d_eventSource;
-	private Node d_logUri;
+	private Node d_dataset;
 	private ThreadLocal<Transaction> d_txn;
 
 	public DatasetGraphEventSourcing(DatasetGraph eventSource, Node logUri) {
@@ -45,12 +45,12 @@ public class DatasetGraphEventSourcing extends DatasetGraphTrackActive implement
 		if (!(eventSource instanceof Transactional)) {
 			throw new IllegalArgumentException("DatasetGraphEventSourcing can only be based on a Transactional DatasetGraph");
 		}
-		d_logUri = logUri;
+		d_dataset = logUri;
 		d_txn = new ThreadLocal<Transaction>();
 	}
 	
 	public Node getLatestEvent() {
-		return EventSource.getLatestEvent(d_eventSource, d_logUri);
+		return EventSource.getLatestVersionUri(d_eventSource, d_dataset);
 	}
 	
 	@Override
@@ -109,10 +109,10 @@ public class DatasetGraphEventSourcing extends DatasetGraphTrackActive implement
 	protected void _begin(ReadWrite readWrite) {
 		if (readWrite == ReadWrite.READ) { // read-only: construct a view
 			getTransactional().begin(ReadWrite.READ);
-			d_txn.set(new Transaction(EventSource.replayLog(d_eventSource, d_logUri)));
+			d_txn.set(new Transaction(EventSource.getLatestVersion(d_eventSource, d_dataset)));
 		} else { // read-write
 			getTransactional().begin(ReadWrite.WRITE);
-			d_txn.set(new Transaction(new DatasetGraphDelta(EventSource.replayLog(d_eventSource, d_logUri))));
+			d_txn.set(new Transaction(new DatasetGraphDelta(EventSource.getLatestVersion(d_eventSource, d_dataset))));
 		}
 		
 	}
@@ -131,7 +131,7 @@ public class DatasetGraphEventSourcing extends DatasetGraphTrackActive implement
 	@Override
 	protected void _commit() {
 		checkWrite();
-		Node version = EventSource.writeToLog(d_eventSource, d_logUri, (DatasetGraphDelta) d_txn.get().dsg, d_txn.get().meta);
+		Node version = EventSource.writeToLog(d_eventSource, d_dataset, (DatasetGraphDelta) d_txn.get().dsg, d_txn.get().meta);
 		getTransactional().commit();
 		d_txn.get().notifyVersion(version);
 		d_txn.remove();
@@ -167,7 +167,8 @@ public class DatasetGraphEventSourcing extends DatasetGraphTrackActive implement
 		// NI
 	}
 
-	public DatasetGraph getView(Node event) {
-		return EventSource.replayLogUntil(d_eventSource, d_logUri, event);
+	public DatasetGraph getView(Node version) {
+		// FIXME: assert the version is of this dataset?
+		return EventSource.getVersion(d_eventSource, version);
 	}
 }
