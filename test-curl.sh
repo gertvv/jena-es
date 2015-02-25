@@ -1,6 +1,7 @@
-DATA=http://localhost:8080/datasets/hello/data
-QUERY=http://localhost:8080/datasets/hello/query
-UPDATE=http://localhost:8080/datasets/hello/update
+DATASET=http://localhost:8080/datasets/d88f36dd-6210-44c1-bb02-6d8f7838061c
+DATA=$DATASET/data
+QUERY=$DATASET/query
+UPDATE=$DATASET/update
 GRAPH=http://trials.drugis.org/studies/9c7bb39e-441c-4a64-a6b9-615f51eb046a
 
 V1=http://drugis.org/eventSourcing/event/4818e24b-50fe-42ce-babc-ffe3569e3da5
@@ -99,6 +100,8 @@ curl -H "X-Accept-EventSource-Version: $V1" -H "Content-Type: application/sparql
 
 # Insert some data
 
+$GRAPH=http://example.com/
+
 function extract {
   grep "X-EventSource-Version: " | sed 's/X-EventSource-Version: //'
 }
@@ -110,18 +113,18 @@ curl -H "X-Accept-EventSource-Version: $LATEST" -H "Content-Type: application/sp
 
 UPDATED=$(extract <update-new.txt)
 
-curl -H "Accept: text/turtle" -H "X-Accept-EventSource-Version: $LATEST" $DATA?graph=http://example.com/
-curl -H "Accept: text/turtle" -H "X-Accept-EventSource-Version: $UPDATED" $DATA?graph=http://example.com/
+curl -H "Accept: text/turtle" -H "X-Accept-EventSource-Version: $LATEST" $DATA?graph=$GRAPH
+curl -H "Accept: text/turtle" -H "X-Accept-EventSource-Version: $UPDATED" $DATA?graph=$GRAPH
 
 curl -s -D - -X PUT -H "Content-Type: text/turtle" -H "X-Accept-EventSource-Version: $UPDATED" \
-  --data "<a> <b> <d>" $DATA?graph=http://example.com/
+  --data "<a> <b> <d>" $DATA?graph=$GRAPH
 
-curl -H "Accept: text/turtle" $DATA?graph=http://example.com/
+curl -H "Accept: text/turtle" $DATA?graph=$GRAPH
 
-curl -s -D - -X POST -H "Content-Type: text/turtle" --data "<a> <b> <e>" $DATA?graph=http://example.com/
+curl -s -D - -X POST -H "Content-Type: text/turtle" --data "<a> <b> <e>" $DATA?graph=$GRAPH
 
-curl -H "Accept: text/turtle" $DATA?graph=http://example.com/
+curl -H "Accept: text/turtle" $DATA?graph=$GRAPH
 
-curl -s -D - -X DELETE $DATA?graph=http://example.com/
+curl -s -D - -X DELETE $DATA?graph=$GRAPH
 
-curl -I -H "Accept: text/turtle" $DATA?graph=http://example.com/
+curl -I -H "Accept: text/turtle" $DATA?graph=$GRAPH

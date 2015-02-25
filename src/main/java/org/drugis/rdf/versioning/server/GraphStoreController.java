@@ -7,6 +7,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,20 +20,23 @@ import com.hp.hpl.jena.graph.GraphUtil;
 import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.graph.NodeFactory;
 import com.hp.hpl.jena.query.ReadWrite;
+import com.hp.hpl.jena.sparql.core.DatasetGraph;
 
 import es.DatasetGraphEventSourcing;
 
 @Controller
 @RequestMapping("/datasets/{datasetId}/data")
 public class GraphStoreController {
-	@Autowired DatasetGraphEventSourcing dataset;
+	@Autowired DatasetGraph d_eventSource;
 
 	@RequestMapping(method={RequestMethod.GET, RequestMethod.HEAD})
 	@ResponseBody
 	public Graph get(
+			@PathVariable String datasetId,
 			@RequestParam Map<String,String> params,
 			@RequestHeader(value="X-Accept-EventSource-Version", required=false) String version,
 			HttpServletResponse response) {
+		final DatasetGraphEventSourcing dataset = getDataset(datasetId);
 		Node graph = NodeFactory.createURI(determineTargetGraph(params).getUri());
 		dataset.begin(ReadWrite.READ);
 		Graph rval;
@@ -50,10 +54,12 @@ public class GraphStoreController {
 	
 	@RequestMapping(method=RequestMethod.PUT)
 	public void put(
+			@PathVariable String datasetId,
 			@RequestParam Map<String,String> params,
 			@RequestHeader(value="X-Accept-EventSource-Version", required=false) String version,
 			final @RequestBody Graph graph,
 			HttpServletResponse response) {
+		final DatasetGraphEventSourcing dataset = getDataset(datasetId);
 		final Node target = NodeFactory.createURI(determineTargetGraph(params).getUri());
 		Runnable action = new Runnable() {
 			@Override
@@ -67,10 +73,12 @@ public class GraphStoreController {
 
 	@RequestMapping(method=RequestMethod.POST)
 	public void post(
+			@PathVariable String datasetId,
 			@RequestParam Map<String,String> params,
 			@RequestHeader(value="X-Accept-EventSource-Version", required=false) String version,
 			final @RequestBody Graph graph,
 			HttpServletResponse response) {
+		final DatasetGraphEventSourcing dataset = getDataset(datasetId);
 		final Node target = NodeFactory.createURI(determineTargetGraph(params).getUri());
 		Runnable action = new Runnable() {
 			@Override
@@ -84,9 +92,11 @@ public class GraphStoreController {
 
 	@RequestMapping(method=RequestMethod.DELETE)
 	public void delete(
+			@PathVariable String datasetId,
 			@RequestParam Map<String,String> params,
 			@RequestHeader(value="X-Accept-EventSource-Version", required=false) String version,
 			HttpServletResponse response) {
+		final DatasetGraphEventSourcing dataset = getDataset(datasetId);
 		final Node target = NodeFactory.createURI(determineTargetGraph(params).getUri());
 		Runnable action = new Runnable() {
 			@Override
@@ -98,6 +108,10 @@ public class GraphStoreController {
 		response.setHeader("X-EventSource-Version", newVersion);
 	}
 	
+	private DatasetGraphEventSourcing getDataset(String datasetId) {
+		return Util.getDataset(d_eventSource, datasetId);
+	}
+
 	static class TargetGraph {
 		public String getUri() {
 			return null;

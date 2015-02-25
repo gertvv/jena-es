@@ -4,11 +4,14 @@ import java.util.Observable;
 import java.util.Observer;
 
 import com.hp.hpl.jena.graph.Node;
+import com.hp.hpl.jena.graph.NodeFactory;
 import com.hp.hpl.jena.query.ReadWrite;
+import com.hp.hpl.jena.sparql.core.DatasetGraph;
 
 import es.DatasetGraphEventSourcing;
 
 public class Util {
+	
 
 	/**
 	 * Run an action in a WRITE transaction and return the newly created version.
@@ -37,6 +40,10 @@ public class Util {
 			dataset.abort();
 			throw e;
 		}
+	}
+
+	static DatasetGraphEventSourcing getDataset(DatasetGraph eventSource, String datasetId) {
+		return new DatasetGraphEventSourcing(eventSource, NodeFactory.createURI("http://example.com/datasets/" + datasetId));
 	}
 
 }

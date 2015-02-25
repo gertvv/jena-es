@@ -5,6 +5,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.drugis.rdf.versioning.server.messages.BooleanResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -26,14 +27,17 @@ import es.DatasetGraphEventSourcing;
 @Controller
 @RequestMapping("/datasets/{datasetId}/query")
 public class QueryController {
-	@Autowired DatasetGraphEventSourcing dataset;
+	@Autowired DatasetGraph d_eventSource;
 
 	@RequestMapping(method={RequestMethod.GET, RequestMethod.HEAD})
 	@ResponseBody
 	public Object query(
+			@PathVariable String datasetId,
 			@RequestParam String query,
 			@RequestHeader(value="X-Accept-EventSource-Version", required=false) String version,
 			HttpServletResponse response) {
+		final DatasetGraphEventSourcing dataset = Util.getDataset(d_eventSource, datasetId);
+
 		System.out.println(query);
 		Query theQuery = QueryFactory.create(query);
 		DatasetGraph dsg = dataset;

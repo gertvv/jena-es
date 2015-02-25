@@ -284,8 +284,12 @@ public class EventSource {
 		if (!exists) {
 			trans.begin(ReadWrite.WRITE);
 			addTriple(eventSource, dataset, RDF.Nodes.type, esClassDataset);
-			writeToLog(eventSource, dataset, new DatasetGraphDelta(DatasetGraphFactory.createMem())); // FIXME: meta-data?
-			addTriple(eventSource, dataset, dcDate, NodeFactory.createLiteral(now(), XSDDatatype.XSDdateTime));
+			Node version = NodeFactory.createURI(VERSION + UUID.randomUUID().toString());
+			addTriple(eventSource, dataset, esPropertyHead, version);
+			addTriple(eventSource, version, RDF.Nodes.type, esClassDatasetVersion);
+			Node date = NodeFactory.createLiteral(now(), XSDDatatype.XSDdateTime);
+			addTriple(eventSource, version, dcDate, date);
+			addTriple(eventSource, dataset, dcDate, date);
 			trans.commit();
 		}
 

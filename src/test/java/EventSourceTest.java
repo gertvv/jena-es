@@ -54,7 +54,7 @@ public class EventSourceTest {
 
 	@Before
 	public void setUp() throws Exception {
-		d_datastore = RDFDataMgr.loadDataset("data-new.trig").asDatasetGraph();
+		d_datastore = RDFDataMgr.loadDataset("data.trig").asDatasetGraph();
 		d_goblinDatasetUri = createURI(DATASET + ID_GOBLIN_DATASET);
 		d_spiderDatasetUri = createURI(DATASET + ID_SPIDER_DATASET);
 		d_goblinV0Uri = createURI(VERSION + ID_GOBLIN_VERSION0);
