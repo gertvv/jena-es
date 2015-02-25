@@ -128,3 +128,7 @@ curl -H "Accept: text/turtle" $DATA?graph=$GRAPH
 curl -s -D - -X DELETE $DATA?graph=$GRAPH
 
 curl -I -H "Accept: text/turtle" $DATA?graph=$GRAPH
+
+# Create a dataset
+
+curl -s -D - -X POST http://localhost:8080/datasets/

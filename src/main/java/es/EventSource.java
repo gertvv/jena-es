@@ -57,9 +57,11 @@ public class EventSource {
 	private String REVISION;
 	private String ASSERT;
 	private String RETRACT;
+	private String d_uriPrefix;
 	
 	public EventSource(DatasetGraph datastore, String uriPrefix) {
 		d_datastore = datastore;
+		d_uriPrefix = uriPrefix;
 		
 		VERSION = uriPrefix + "versions/";
 		REVISION = uriPrefix + "revisions/";
@@ -69,6 +71,10 @@ public class EventSource {
 	
 	public DatasetGraph getDataStore() {
 		return d_datastore;
+	}
+	
+	public String getUriPrefix() {
+		return d_uriPrefix;
 	}
 
 	public Node getLatestVersionUri(Node dataset) {

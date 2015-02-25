@@ -16,6 +16,11 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 
 import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.graph.NodeFactory;
+import com.hp.hpl.jena.graph.Triple;
+import com.hp.hpl.jena.query.ReadWrite;
+import com.hp.hpl.jena.sparql.core.Transactional;
+import com.hp.hpl.jena.util.iterator.ExtendedIterator;
+import com.hp.hpl.jena.vocabulary.RDF;
 
 import es.EventSource;
 
@@ -28,7 +33,25 @@ public class DatasetController {
 	@RequestMapping(value="", method=RequestMethod.GET, produces="text/html")
 	@ResponseBody
 	public String list() {
-		return "<a href=\"/datasets/hello\">Only dataset</a>";
+		StringBuilder builder = new StringBuilder();
+		builder.append("<html><body><ul>");
+		Transactional transactional = (Transactional)eventSource.getDataStore();
+		transactional.begin(ReadWrite.READ);
+		try {
+			ExtendedIterator<Triple> find = eventSource.getDataStore().getDefaultGraph().find(Node.ANY, RDF.Nodes.type, EventSource.esClassDataset);
+			while (find.hasNext()) {
+				Triple triple = find.next();
+				builder.append("<li><a href=\"");
+				builder.append(triple.getSubject().getURI());
+				builder.append("\">");
+				builder.append(triple.getSubject().getURI());
+				builder.append("</a></li>");
+			}
+			builder.append("</ul></body></html>");
+		} finally {
+			transactional.end();
+		}
+		return builder.toString();
 	}
 	
 	@RequestMapping(value="", method=RequestMethod.POST)
