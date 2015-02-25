@@ -6,9 +6,9 @@ import java.util.Observer;
 import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.graph.NodeFactory;
 import com.hp.hpl.jena.query.ReadWrite;
-import com.hp.hpl.jena.sparql.core.DatasetGraph;
 
 import es.DatasetGraphEventSourcing;
+import es.EventSource;
 
 public class Util {
 	
@@ -42,7 +42,7 @@ public class Util {
 		}
 	}
 
-	static DatasetGraphEventSourcing getDataset(DatasetGraph eventSource, String datasetId) {
+	static DatasetGraphEventSourcing getDataset(EventSource eventSource, String datasetId) {
 		return new DatasetGraphEventSourcing(eventSource, NodeFactory.createURI("http://example.com/datasets/" + datasetId));
 	}
 

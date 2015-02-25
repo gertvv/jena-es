@@ -40,6 +40,7 @@ public class EventSourceTest {
 			ID_REV3 = "44ea0618-43e8-11e4-bcfb-bba47531d497";
 
 	private DatasetGraph d_datastore;
+	private EventSource d_eventSource;
 
 	private Node d_goblinDatasetUri;
 	private Node d_spiderDatasetUri;
@@ -55,6 +56,7 @@ public class EventSourceTest {
 	@Before
 	public void setUp() throws Exception {
 		d_datastore = RDFDataMgr.loadDataset("data.trig").asDatasetGraph();
+		d_eventSource = new EventSource(d_datastore, "http://example.com/");
 		d_goblinDatasetUri = createURI(DATASET + ID_GOBLIN_DATASET);
 		d_spiderDatasetUri = createURI(DATASET + ID_SPIDER_DATASET);
 		d_goblinV0Uri = createURI(VERSION + ID_GOBLIN_VERSION0);
@@ -91,56 +93,56 @@ public class EventSourceTest {
 	
 	@Test
 	public void testGetRevision() {
-		checkGraphRev1(EventSource.getRevision(d_datastore, d_rev1Uri));
-		checkGraphRev3(EventSource.getRevision(d_datastore, d_rev3Uri));
+		checkGraphRev1(d_eventSource.getRevision(d_rev1Uri));
+		checkGraphRev3(d_eventSource.getRevision(d_rev3Uri));
 	}
 	
 	@Test
 	public void testGetVersion() {
 		DatasetGraph ds;
-		ds = EventSource.getVersion(d_datastore, d_goblinV0Uri);
+		ds = d_eventSource.getVersion(d_goblinV0Uri);
 		checkDatasetEmpty(ds);
 		
-		ds = EventSource.getVersion(d_datastore, d_goblinV1Uri);
+		ds = d_eventSource.getVersion(d_goblinV1Uri);
 		checkDatasetAfterEvent1(ds);
 		
-		ds = EventSource.getVersion(d_datastore, d_spiderV0Uri);
+		ds = d_eventSource.getVersion(d_spiderV0Uri);
 		checkDatasetAfterEvent1(ds);
 		
-		ds = EventSource.getVersion(d_datastore, d_spiderV1Uri);
+		ds = d_eventSource.getVersion(d_spiderV1Uri);
 		checkDatasetAfterEvent2(ds);
 	}
 
 	@Test
 	public void testGetLatestEventURI() {
-		assertEquals(d_goblinV1Uri, EventSource.getLatestVersionUri(d_datastore, d_goblinDatasetUri));
-		assertEquals(d_spiderV1Uri, EventSource.getLatestVersionUri(d_datastore, d_spiderDatasetUri));
+		assertEquals(d_goblinV1Uri, d_eventSource.getLatestVersionUri(d_goblinDatasetUri));
+		assertEquals(d_spiderV1Uri, d_eventSource.getLatestVersionUri(d_spiderDatasetUri));
 	}
 	
 	@Test
 	public void testWriteToLog() {
-		DatasetGraph ds = EventSource.getVersion(d_datastore, d_spiderDatasetUri);
+		DatasetGraph ds = d_eventSource.getVersion(d_spiderDatasetUri);
 		DatasetGraphDelta delta = new DatasetGraphDelta(ds);
 		applyGraphMod(delta);
-		EventSource.writeToLog(d_datastore, d_spiderDatasetUri, delta);
+		d_eventSource.writeToLog(d_spiderDatasetUri, delta);
 		
-		ds = EventSource.getLatestVersion(d_datastore, d_spiderDatasetUri);
+		ds = d_eventSource.getLatestVersion(d_spiderDatasetUri);
 		RDFDataMgr.write(System.out, d_datastore.getDefaultGraph(), Lang.TURTLE);
 		checkGraphAfterMod(ds);
 	}
 	
 	@Test
 	public void testWriteToLogWithMetaData() {
-		DatasetGraph ds = EventSource.getLatestVersion(d_datastore, d_spiderDatasetUri);
+		DatasetGraph ds = d_eventSource.getLatestVersion(d_spiderDatasetUri);
 		DatasetGraphDelta delta = new DatasetGraphDelta(ds);
 		applyGraphMod(delta);
 		Graph meta = GraphFactory.createGraphMem();
 		Node root = createAnon();
 		meta.add(new Triple(root, RDF.Nodes.type, EventSource.esClassDatasetVersion));
 		meta.add(new Triple(root, EventSource.dcCreator, createURI("http://example.com/PeterParker")));
-		Node version = EventSource.writeToLog(d_datastore, d_spiderDatasetUri, delta, meta);
+		Node version = d_eventSource.writeToLog(d_spiderDatasetUri, delta, meta);
 
-		ds = EventSource.getLatestVersion(d_datastore, d_spiderDatasetUri);
+		ds = d_eventSource.getLatestVersion(d_spiderDatasetUri);
 		checkGraphAfterMod(ds);
 		assertTrue(d_datastore.getDefaultGraph().contains(version, EventSource.dcCreator, createURI("http://example.com/PeterParker")));
 	}
@@ -154,7 +156,7 @@ public class EventSourceTest {
 				_end();
 			}
 		};
-		DatasetGraphEventSourcing ds = new DatasetGraphEventSourcing(dataset, d_spiderDatasetUri);
+		DatasetGraphEventSourcing ds = new DatasetGraphEventSourcing(new EventSource(dataset, "http://example.com/"), d_spiderDatasetUri);
 
 		ds.begin(ReadWrite.READ);
 		checkDatasetAfterEvent2(ds);

@@ -13,16 +13,16 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 
 import com.hp.hpl.jena.query.Syntax;
-import com.hp.hpl.jena.sparql.core.DatasetGraph;
 import com.hp.hpl.jena.sparql.modify.UsingList;
 import com.hp.hpl.jena.update.UpdateAction;
 
 import es.DatasetGraphEventSourcing;
+import es.EventSource;
 
 @Controller
 @RequestMapping("/datasets/{datasetId}/update")
 public class UpdateController {
-	@Autowired DatasetGraph d_eventSource;
+	@Autowired EventSource d_eventSource;
 
 	private static final String UpdateParseBase = "http://example/update-base/"; // FIXME
 

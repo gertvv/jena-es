@@ -5,6 +5,7 @@ import java.util.UUID;
 import javax.servlet.http.HttpServletResponse;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -15,14 +16,13 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 
 import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.graph.NodeFactory;
-import com.hp.hpl.jena.sparql.core.DatasetGraph;
 
 import es.EventSource;
 
 @Controller
 @RequestMapping("/datasets")
 public class DatasetController {
-	@Autowired DatasetGraph eventSource;
+	@Autowired EventSource eventSource;
 
 	@Autowired
 	@RequestMapping(value="", method=RequestMethod.GET, produces="text/html")
@@ -36,8 +36,8 @@ public class DatasetController {
 	public void create(HttpServletResponse response) {
 		String id = UUID.randomUUID().toString();
 		Node dataset = NodeFactory.createURI("http://example.com/datasets/" + id);
-		EventSource.createDatasetIfNotExists(eventSource, dataset);
-		response.setHeader("Location", dataset.getURI());
+		eventSource.createDatasetIfNotExists(dataset);
+		response.setHeader(HttpHeaders.LOCATION, dataset.getURI());
 	}
 
 	@RequestMapping(value="/{id}", method=RequestMethod.GET, produces="text/html")

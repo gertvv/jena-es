@@ -23,11 +23,12 @@ import com.hp.hpl.jena.query.ResultSet;
 import com.hp.hpl.jena.sparql.core.DatasetGraph;
 
 import es.DatasetGraphEventSourcing;
+import es.EventSource;
 
 @Controller
 @RequestMapping("/datasets/{datasetId}/query")
 public class QueryController {
-	@Autowired DatasetGraph d_eventSource;
+	@Autowired EventSource d_eventSource;
 
 	@RequestMapping(method={RequestMethod.GET, RequestMethod.HEAD})
 	@ResponseBody

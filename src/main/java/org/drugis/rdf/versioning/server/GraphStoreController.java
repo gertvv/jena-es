@@ -6,6 +6,7 @@ import java.util.Map;
 import javax.servlet.http.HttpServletResponse;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -20,21 +21,21 @@ import com.hp.hpl.jena.graph.GraphUtil;
 import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.graph.NodeFactory;
 import com.hp.hpl.jena.query.ReadWrite;
-import com.hp.hpl.jena.sparql.core.DatasetGraph;
 
 import es.DatasetGraphEventSourcing;
+import es.EventSource;
 
 @Controller
 @RequestMapping("/datasets/{datasetId}/data")
 public class GraphStoreController {
-	@Autowired DatasetGraph d_eventSource;
+	@Autowired EventSource d_eventSource;
 
 	@RequestMapping(method={RequestMethod.GET, RequestMethod.HEAD})
 	@ResponseBody
 	public Graph get(
 			@PathVariable String datasetId,
 			@RequestParam Map<String,String> params,
-			@RequestHeader(value="X-Accept-EventSource-Version", required=false) String version,
+			@RequestHeader(value=ESHeaders.ACCEPT_VERSION, required=false) String version,
 			HttpServletResponse response) {
 		final DatasetGraphEventSourcing dataset = getDataset(datasetId);
 		Node graph = NodeFactory.createURI(determineTargetGraph(params).getUri());
@@ -47,8 +48,8 @@ public class GraphStoreController {
 			rval = dataset.getView(NodeFactory.createURI(version)).getGraph(graph);
 		}
 		dataset.end();
-		response.setHeader("X-EventSource-Version", version);
-		response.setHeader("Vary", "Accept, X-Accept-EventSource-Version");
+		response.setHeader(ESHeaders.VERSION, version);
+		response.setHeader(HttpHeaders.VARY, HttpHeaders.ACCEPT + ", " + ESHeaders.ACCEPT_VERSION);
 		return rval;
 	}
 	

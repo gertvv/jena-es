@@ -29,11 +29,7 @@ import com.hp.hpl.jena.vocabulary.RDF;
 
 @SuppressWarnings("deprecation")
 public class EventSource {
-	public static final String ES="http://drugis.org/eventSourcing/es#",
-			VERSION="http://example.com/versions/",
-			REVISION="http://example.com/revisions/",
-			ASSERT="http://drugis.org/eventSourcing/assert/",
-			RETRACT="http://drugis.org/eventSourcing/retract/";
+	public static final String ES="http://drugis.org/eventSourcing/es#";
 	public static final Node esClassDataset = NodeFactory.createURI(ES + "EventSourcedDataset"),
 			esClassDatasetVersion = NodeFactory.createURI(ES + "DatasetVersion"),
 			esClassRevision = NodeFactory.createURI(ES + "Revision"),
@@ -55,9 +51,28 @@ public class EventSource {
 			super(message);
 		}
 	}
+
+	private DatasetGraph d_datastore;
+	private String VERSION;
+	private String REVISION;
+	private String ASSERT;
+	private String RETRACT;
 	
-	public static Node getLatestVersionUri(DatasetGraph eventSource, Node dataset) {
-		return getUniqueObject(eventSource.getDefaultGraph().find(dataset, esPropertyHead, Node.ANY));
+	public EventSource(DatasetGraph datastore, String uriPrefix) {
+		d_datastore = datastore;
+		
+		VERSION = uriPrefix + "versions/";
+		REVISION = uriPrefix + "revisions/";
+		ASSERT = uriPrefix + "assert/";
+		RETRACT = uriPrefix + "retract/";
+	}
+	
+	public DatasetGraph getDataStore() {
+		return d_datastore;
+	}
+
+	public Node getLatestVersionUri(Node dataset) {
+		return getUniqueObject(d_datastore.getDefaultGraph().find(dataset, esPropertyHead, Node.ANY));
 	}
 	
 	private static Node getUniqueOptionalObject(Iterator<Triple> result) {
@@ -91,28 +106,28 @@ public class EventSource {
 		return map;
 	}
 
-	public static DatasetGraph getVersion(DatasetGraph eventSource, Node version) {
+	public DatasetGraph getVersion(Node version) {
 		DatasetGraph ds = DatasetGraphFactory.createMem();
-		for (Map.Entry<Node, Node> entry : getGraphRevisions(eventSource, version).entrySet()) {
+		for (Map.Entry<Node, Node> entry : getGraphRevisions(d_datastore, version).entrySet()) {
 			Node graphName = entry.getKey();
 			Node revision = entry.getValue();
-			Graph graph = getRevision(eventSource, revision);
+			Graph graph = getRevision(revision);
 			ds.addGraph(graphName, graph);
 		}
 		return ds;
 	}
 	
-	public static DatasetGraph getLatestVersion(DatasetGraph eventSource, Node dataset) {
-		return getVersion(eventSource, getLatestVersionUri(eventSource, dataset));
+	public DatasetGraph getLatestVersion(Node dataset) {
+		return getVersion(getLatestVersionUri(dataset));
 	}
 
-	public static Graph getRevision(DatasetGraph eventSource, Node revision) {
-		Node previous = getUniqueOptionalObject(eventSource.getDefaultGraph().find(revision, esPropertyPrevious, Node.ANY));
+	public Graph getRevision(Node revision) {
+		Node previous = getUniqueOptionalObject(d_datastore.getDefaultGraph().find(revision, esPropertyPrevious, Node.ANY));
 		Graph graph = GraphFactory.createGraphMem();
 		if (previous != null) {
-			graph = getRevision(eventSource, previous);
+			graph = getRevision(previous);
 		}
-		return applyRevision(eventSource, graph, revision);
+		return applyRevision(d_datastore, graph, revision);
 	}
 	
 	private static Graph matchingGraph(DatasetGraph eventSource, Iterator<Triple> result) {
@@ -146,8 +161,8 @@ public class EventSource {
 	 * @param event The event (changeset).
 	 * @return The ID of the event.
 	 */
-	public static Node writeToLog(DatasetGraph eventSource, Node dataset, DatasetGraphDelta event) {
-		return writeToLog(eventSource, dataset, event, GraphFactory.createGraphMem());
+	public Node writeToLog(Node dataset, DatasetGraphDelta event) {
+		return writeToLog(dataset, event, GraphFactory.createGraphMem());
 	}
 	
 	/**
@@ -159,34 +174,34 @@ public class EventSource {
 
 	/**
 	 * Write an event to the log, assuming it is consistent with the current state.
-	 * @param eventSource The DatasetGraph containing the event log.
+	 * @param d_datastore The DatasetGraph containing the event log.
 	 * @param log The URI of the event log.
 	 * @param event The event (changeset).
 	 * @param meta A graph containing meta-data. It must contain a single blank node of class es:Event, the properties of which will be added to the event meta-data.
 	 * @return The ID of the event.
 	 */
-	public static Node writeToLog(DatasetGraph eventSource, Node dataset, DatasetGraphDelta event, Graph meta) {
-		Node previous = getLatestVersionUri(eventSource, dataset);
+	public Node writeToLog(Node dataset, DatasetGraphDelta event, Graph meta) {
+		Node previous = getLatestVersionUri(dataset);
 		Node version = NodeFactory.createURI(VERSION + UUID.randomUUID().toString());
 		
-		addTriple(eventSource, version, RDF.Nodes.type, esClassDatasetVersion);
-		addTriple(eventSource, version, dcDate, NodeFactory.createLiteral(now(), XSDDatatype.XSDdateTime));
+		addTriple(d_datastore, version, RDF.Nodes.type, esClassDatasetVersion);
+		addTriple(d_datastore, version, dcDate, NodeFactory.createLiteral(now(), XSDDatatype.XSDdateTime));
 		
-		addMetaData(eventSource, meta, version, esClassDatasetVersion);
+		addMetaData(d_datastore, meta, version, esClassDatasetVersion);
 
-		Map<Node, Node> previousRevisions = getGraphRevisions(eventSource, previous);
+		Map<Node, Node> previousRevisions = getGraphRevisions(d_datastore, previous);
 		for (Iterator<Node> graphs = event.listGraphNodes(); graphs.hasNext(); ) {
 			Node graph = graphs.next();
 			if (!event.getModifications().containsKey(graph)) {
-				addGraphRevision(eventSource, version, graph, previousRevisions.get(graph));
+				addGraphRevision(d_datastore, version, graph, previousRevisions.get(graph));
 			} else if (!event.getGraph(graph).isEmpty()) {
-				addGraphRevision(eventSource, version, graph, writeRevision(eventSource, event.getModifications().get(graph), graph, previousRevisions.get(graph)));
+				addGraphRevision(d_datastore, version, graph, writeRevision(event.getModifications().get(graph), graph, previousRevisions.get(graph)));
 			}
 		}
 		
-		addTriple(eventSource, version, esPropertyPrevious, previous);
-		eventSource.getDefaultGraph().remove(dataset, esPropertyHead, previous);
-		addTriple(eventSource, dataset, esPropertyHead, version);
+		addTriple(d_datastore, version, esPropertyPrevious, previous);
+		d_datastore.getDefaultGraph().remove(dataset, esPropertyHead, previous);
+		addTriple(d_datastore, dataset, esPropertyHead, version);
 		
 		return version;
 	}
@@ -251,45 +266,45 @@ public class EventSource {
 	/**
 	 * Write a revision to the log.
 	 */
-	private static Node writeRevision(DatasetGraph eventSource, Delta delta, Node graph, Node previousRevision) {
+	private Node writeRevision(Delta delta, Node graph, Node previousRevision) {
 		String revId = UUID.randomUUID().toString();
 		Node revisionId = NodeFactory.createURI(REVISION + revId);
 		Node assertId = NodeFactory.createURI(ASSERT + revId);
 		Node retractId = NodeFactory.createURI(RETRACT + revId);
 		
-		addTriple(eventSource, revisionId, RDF.Nodes.type, esClassRevision);
+		addTriple(d_datastore, revisionId, RDF.Nodes.type, esClassRevision);
 		if (previousRevision != null) {
-			addTriple(eventSource, revisionId, esPropertyPrevious, previousRevision);
+			addTriple(d_datastore, revisionId, esPropertyPrevious, previousRevision);
 		}
 
 		if (!delta.getAdditions().isEmpty()) {
-			addTriple(eventSource, revisionId, esPropertyAssertions, assertId);
-			eventSource.addGraph(assertId, delta.getAdditions());
+			addTriple(d_datastore, revisionId, esPropertyAssertions, assertId);
+			d_datastore.addGraph(assertId, delta.getAdditions());
 		}
 		if (!delta.getDeletions().isEmpty()) {
-			addTriple(eventSource, revisionId, esPropertyRetractions, retractId);
-			eventSource.addGraph(retractId, delta.getDeletions());
+			addTriple(d_datastore, revisionId, esPropertyRetractions, retractId);
+			d_datastore.addGraph(retractId, delta.getDeletions());
 		}
 
 		return revisionId;
 	}
 
-	public static void createDatasetIfNotExists(DatasetGraph eventSource, Node dataset) {
-		Transactional trans = (Transactional) eventSource;
+	public void createDatasetIfNotExists(Node dataset) {
+		Transactional trans = (Transactional) d_datastore;
 
 		trans.begin(ReadWrite.READ);
-		boolean exists = eventSource.getDefaultGraph().contains(dataset, RDF.Nodes.type, esClassDataset);
+		boolean exists = d_datastore.getDefaultGraph().contains(dataset, RDF.Nodes.type, esClassDataset);
 		trans.end();
 
 		if (!exists) {
 			trans.begin(ReadWrite.WRITE);
-			addTriple(eventSource, dataset, RDF.Nodes.type, esClassDataset);
+			addTriple(d_datastore, dataset, RDF.Nodes.type, esClassDataset);
 			Node version = NodeFactory.createURI(VERSION + UUID.randomUUID().toString());
-			addTriple(eventSource, dataset, esPropertyHead, version);
-			addTriple(eventSource, version, RDF.Nodes.type, esClassDatasetVersion);
+			addTriple(d_datastore, dataset, esPropertyHead, version);
+			addTriple(d_datastore, version, RDF.Nodes.type, esClassDatasetVersion);
 			Node date = NodeFactory.createLiteral(now(), XSDDatatype.XSDdateTime);
-			addTriple(eventSource, version, dcDate, date);
-			addTriple(eventSource, dataset, dcDate, date);
+			addTriple(d_datastore, version, dcDate, date);
+			addTriple(d_datastore, dataset, dcDate, date);
 			trans.commit();
 		}
 

@@ -5,20 +5,24 @@ import java.util.List;
 import org.drugis.rdf.versioning.server.messages.BooleanResultMessageConverter;
 import org.drugis.rdf.versioning.server.messages.JenaGraphMessageConverter;
 import org.drugis.rdf.versioning.server.messages.JenaResultSetMessageConverter;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.web.WebMvcAutoConfiguration.WebMvcAutoConfigurationAdapter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.web.filter.CharacterEncodingFilter;
 
-import com.hp.hpl.jena.sparql.core.DatasetGraph;
 import com.hp.hpl.jena.tdb.TDBFactory;
+
+import es.EventSource;
 
 @Configuration
 public class Config extends WebMvcAutoConfigurationAdapter {
+    @Value("${EVENT_SOURCE_URI_PREFIX}") private String uriPrefix;
+	
 	@Bean
-	public DatasetGraph eventSource() {
-		return TDBFactory.createDatasetGraph("DB");
+	public EventSource eventSource() {
+		return new EventSource(TDBFactory.createDatasetGraph("DB"), uriPrefix);
 	}
 
 	@Bean
