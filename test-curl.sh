@@ -144,3 +144,9 @@ curl $DATASET
 # Get history
 
 curl $DATASET/history
+
+
+curl -s -D - -X POST -H "Content-Type: text/turtle" \
+  -H "X-EventSource-Creator: http://example.com/PeterParker" \
+  -H "X-EventSource-Title: Q29weSBHcmVlbkdvYmxpbi9TcGlkZXJtYW4=" \
+  --data "<a> <b> <f>" $DATA?graph=$GRAPH

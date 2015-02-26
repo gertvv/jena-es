@@ -29,7 +29,8 @@ import com.hp.hpl.jena.vocabulary.RDF;
 
 @SuppressWarnings("deprecation")
 public class EventSource {
-	public static final String ES="http://drugis.org/eventSourcing/es#";
+	public static final String ES="http://drugis.org/eventSourcing/es#",
+			DCTERMS="http://purl.org/dc/terms/";
 	public static final Node esClassDataset = NodeFactory.createURI(ES + "Dataset"),
 			esClassDatasetVersion = NodeFactory.createURI(ES + "DatasetVersion"),
 			esClassRevision = NodeFactory.createURI(ES + "Revision"),
@@ -41,8 +42,10 @@ public class EventSource {
 			esPropertyPrevious = NodeFactory.createURI(ES + "previous"),
 			esPropertyAssertions = NodeFactory.createURI(ES + "assertions"),
 			esPropertyRetractions = NodeFactory.createURI(ES + "retractions"),
-			dcDate = NodeFactory.createURI("http://purl.org/dc/elements/1.1/date"),
-			dcCreator = NodeFactory.createURI("http://purl.org/dc/elements/1.1/creator");
+			dctermsDate = NodeFactory.createURI(DCTERMS + "date"),
+			dctermsCreator = NodeFactory.createURI(DCTERMS + "creator"),
+			dctermsTitle = NodeFactory.createURI(DCTERMS + "title"),
+			dctermsDescription = NodeFactory.createURI(DCTERMS + "description");
 
 	public static class EventNotFoundException extends RuntimeException {
 		private static final long serialVersionUID = -1603163798182523814L;
@@ -191,7 +194,7 @@ public class EventSource {
 		Node version = NodeFactory.createURI(VERSION + UUID.randomUUID().toString());
 		
 		addTriple(d_datastore, version, RDF.Nodes.type, esClassDatasetVersion);
-		addTriple(d_datastore, version, dcDate, NodeFactory.createLiteral(now(), XSDDatatype.XSDdateTime));
+		addTriple(d_datastore, version, dctermsDate, NodeFactory.createLiteral(now(), XSDDatatype.XSDdateTime));
 		
 		addMetaData(d_datastore, meta, version, esClassDatasetVersion);
 
@@ -238,7 +241,7 @@ public class EventSource {
 			meta.remove(root, EventSource.esPropertyGraph, Node.ANY);
 			meta.remove(root, EventSource.esPropertyAssertions, Node.ANY);
 			meta.remove(root, EventSource.esPropertyRetractions, Node.ANY);
-			meta.remove(root, EventSource.dcDate, Node.ANY);
+			meta.remove(root, EventSource.dctermsDate, Node.ANY);
 			
 			// Replace the temporary root node by the event URI
 			replaceNode(meta, root, resource);
@@ -309,8 +312,8 @@ public class EventSource {
 			addTriple(d_datastore, dataset, esPropertyHead, version);
 			addTriple(d_datastore, version, RDF.Nodes.type, esClassDatasetVersion);
 			Node date = NodeFactory.createLiteral(now(), XSDDatatype.XSDdateTime);
-			addTriple(d_datastore, version, dcDate, date);
-			addTriple(d_datastore, dataset, dcDate, date);
+			addTriple(d_datastore, version, dctermsDate, date);
+			addTriple(d_datastore, dataset, dctermsDate, date);
 			trans.commit();
 		}
 

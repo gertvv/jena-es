@@ -139,12 +139,12 @@ public class EventSourceTest {
 		Graph meta = GraphFactory.createGraphMem();
 		Node root = createAnon();
 		meta.add(new Triple(root, RDF.Nodes.type, EventSource.esClassDatasetVersion));
-		meta.add(new Triple(root, EventSource.dcCreator, createURI("http://example.com/PeterParker")));
+		meta.add(new Triple(root, EventSource.dctermsCreator, createURI("http://example.com/PeterParker")));
 		Node version = d_eventSource.writeToLog(d_spiderDatasetUri, delta, meta);
 
 		ds = d_eventSource.getLatestVersion(d_spiderDatasetUri);
 		checkGraphAfterMod(ds);
-		assertTrue(d_datastore.getDefaultGraph().contains(version, EventSource.dcCreator, createURI("http://example.com/PeterParker")));
+		assertTrue(d_datastore.getDefaultGraph().contains(version, EventSource.dctermsCreator, createURI("http://example.com/PeterParker")));
 	}
 
 	@Test

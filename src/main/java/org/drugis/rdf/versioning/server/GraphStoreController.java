@@ -3,6 +3,7 @@ package org.drugis.rdf.versioning.server;
 import java.util.Collections;
 import java.util.Map;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -59,6 +60,7 @@ public class GraphStoreController {
 			@RequestParam Map<String,String> params,
 			@RequestHeader(value="X-Accept-EventSource-Version", required=false) String version,
 			final @RequestBody Graph graph,
+			HttpServletRequest request,
 			HttpServletResponse response) {
 		final DatasetGraphEventSourcing dataset = getDataset(datasetId);
 		final Node target = NodeFactory.createURI(determineTargetGraph(params).getUri());
@@ -68,16 +70,17 @@ public class GraphStoreController {
 				dataset.addGraph(target, graph);
 			}
 		};
-		String newVersion = Util.runReturningVersion(dataset, version, action);
+		String newVersion = Util.runReturningVersion(dataset, version, action, Util.versionMetaData(request));
 		response.setHeader("X-EventSource-Version", newVersion);
 	}
-
+	
 	@RequestMapping(method=RequestMethod.POST)
 	public void post(
 			@PathVariable String datasetId,
 			@RequestParam Map<String,String> params,
 			@RequestHeader(value="X-Accept-EventSource-Version", required=false) String version,
 			final @RequestBody Graph graph,
+			HttpServletRequest request,
 			HttpServletResponse response) {
 		final DatasetGraphEventSourcing dataset = getDataset(datasetId);
 		final Node target = NodeFactory.createURI(determineTargetGraph(params).getUri());
@@ -87,7 +90,7 @@ public class GraphStoreController {
 				GraphUtil.addInto(dataset.getGraph(target), graph);
 			}
 		};
-		String newVersion = Util.runReturningVersion(dataset, version, action);
+		String newVersion = Util.runReturningVersion(dataset, version, action, Util.versionMetaData(request));
 		response.setHeader("X-EventSource-Version", newVersion);
 	}
 
@@ -96,6 +99,7 @@ public class GraphStoreController {
 			@PathVariable String datasetId,
 			@RequestParam Map<String,String> params,
 			@RequestHeader(value="X-Accept-EventSource-Version", required=false) String version,
+			HttpServletRequest request,
 			HttpServletResponse response) {
 		final DatasetGraphEventSourcing dataset = getDataset(datasetId);
 		final Node target = NodeFactory.createURI(determineTargetGraph(params).getUri());
@@ -105,7 +109,7 @@ public class GraphStoreController {
 				dataset.removeGraph(target);
 			}
 		};
-		String newVersion = Util.runReturningVersion(dataset, version, action);
+		String newVersion = Util.runReturningVersion(dataset, version, action, Util.versionMetaData(request));
 		response.setHeader("X-EventSource-Version", newVersion);
 	}
 	

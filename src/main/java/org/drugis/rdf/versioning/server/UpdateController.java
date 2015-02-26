@@ -47,7 +47,7 @@ public class UpdateController {
 			}
 		};
 
-		String newVersion = Util.runReturningVersion(dataset, version, action);
+		String newVersion = Util.runReturningVersion(dataset, version, action, Util.versionMetaData(request));
 		response.setHeader("X-EventSource-Version", newVersion);
 		return null;
 	}
