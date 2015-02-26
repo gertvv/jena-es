@@ -32,7 +32,6 @@ public class DatasetController {
 	@Autowired String datasetInfoQuery;
 	@Autowired String datasetHistoryQuery;
 
-	@Autowired
 	@RequestMapping(value="", method=RequestMethod.GET, produces="text/html")
 	@ResponseBody
 	public String list() {
@@ -70,7 +69,6 @@ public class DatasetController {
 	@ResponseBody
 	public Graph get(@PathVariable String id) {
 		String query = datasetInfoQuery.replaceAll("\\$dataset", "<" + eventSource.getUriPrefix() + "datasets/" + id + ">");
-		System.out.println(query);
 		return Util.queryDataStore(eventSource, query);
 	}
 
@@ -78,7 +76,6 @@ public class DatasetController {
 	@ResponseBody
 	public Graph history(@PathVariable String id) {
 		String query = datasetHistoryQuery.replaceAll("\\$dataset", "<" + eventSource.getUriPrefix() + "datasets/" + id + ">");
-		System.out.println(query);
 		return Util.queryDataStore(eventSource, query);
 	}
 }

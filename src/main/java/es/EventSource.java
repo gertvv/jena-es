@@ -35,6 +35,7 @@ public class EventSource {
 			esClassDatasetVersion = NodeFactory.createURI(ES + "DatasetVersion"),
 			esClassRevision = NodeFactory.createURI(ES + "Revision"),
 			esPropertyHead = NodeFactory.createURI(ES + "head"),
+			esPropertyDataset = NodeFactory.createURI(ES + "dataset"),
 			esPropertyDefaultGraphRevision = NodeFactory.createURI(ES + "default_graph_revision"),
 			esPropertyGraphRevision = NodeFactory.createURI(ES + "graph_revision"),
 			esPropertyGraph = NodeFactory.createURI(ES + "graph"),
@@ -194,6 +195,7 @@ public class EventSource {
 		Node version = NodeFactory.createURI(VERSION + UUID.randomUUID().toString());
 		
 		addTriple(d_datastore, version, RDF.Nodes.type, esClassDatasetVersion);
+		addTriple(d_datastore, version, esPropertyDataset, dataset);
 		addTriple(d_datastore, version, dctermsDate, NodeFactory.createLiteral(now(), XSDDatatype.XSDdateTime));
 		
 		addMetaData(d_datastore, meta, version, esClassDatasetVersion);

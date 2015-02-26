@@ -4,8 +4,7 @@ PREFIX es: <http://drugis.org/eventSourcing/es#>
 CONSTRUCT {
  ?s ?p ?o
 } WHERE {
-  $dataset owl:sameAs{0} ?dataset .
-  ?dataset es:head?/(es:graph_revision|es:default_graph_revision)?/es:revision? ?s .
+  $dataset es:head?/(es:graph_revision|es:default_graph_revision)?/es:revision? ?s .
 
   ?s ?p ?o .
 }

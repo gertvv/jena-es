@@ -36,6 +36,12 @@ public class Config extends WebMvcAutoConfigurationAdapter {
     	Resource resource = new ClassPathResource("/org/drugis/rdf/versioning/datasetInfo.sparql");
 		return FileCopyUtils.copyToString(new InputStreamReader(resource.getInputStream()));
     }
+    
+    @Bean
+    public String versionInfoQuery() throws IOException {
+    	Resource resource = new ClassPathResource("/org/drugis/rdf/versioning/versionInfo.sparql");
+		return FileCopyUtils.copyToString(new InputStreamReader(resource.getInputStream()));
+    }
 	
 	@Bean
 	public EventSource eventSource() {
