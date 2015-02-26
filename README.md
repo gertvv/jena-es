@@ -14,11 +14,4 @@ However, a number of features do require modifications to Fuseki and the HTTP AP
  - Returning the event ID to the client after a change has been committed.
 
 These are cumbersome to implement as Fuseki was clearly not intended for such modifications.
-Access to prior versions is controlled using the ?event=$URI parameter, and the latter two use cases are not yet implemented.
-
-Building and running
---------------------
-
-To build, use maven, either `mvn compile` or `mvn test`.
-
-To run the Fuseki server, build a jar with dependencies using `mvn package` and run the `my-fuseki.sh` script. It requires `$FUSEKI_HOME` to be set to the location of a Fuseki installation (fuseki-1.1.1 was in use at the time of writing).
+Therefore, Fuseki has been replaced by a custom server based on the Spring framework.
