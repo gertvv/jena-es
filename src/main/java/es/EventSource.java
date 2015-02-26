@@ -30,7 +30,7 @@ import com.hp.hpl.jena.vocabulary.RDF;
 @SuppressWarnings("deprecation")
 public class EventSource {
 	public static final String ES="http://drugis.org/eventSourcing/es#";
-	public static final Node esClassDataset = NodeFactory.createURI(ES + "EventSourcedDataset"),
+	public static final Node esClassDataset = NodeFactory.createURI(ES + "Dataset"),
 			esClassDatasetVersion = NodeFactory.createURI(ES + "DatasetVersion"),
 			esClassRevision = NodeFactory.createURI(ES + "Revision"),
 			esPropertyHead = NodeFactory.createURI(ES + "head"),

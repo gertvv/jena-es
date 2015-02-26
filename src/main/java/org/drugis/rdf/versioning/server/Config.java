@@ -1,5 +1,7 @@
 package org.drugis.rdf.versioning.server;
 
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.List;
 
 import org.drugis.rdf.versioning.server.messages.BooleanResultMessageConverter;
@@ -9,7 +11,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.web.WebMvcAutoConfiguration.WebMvcAutoConfigurationAdapter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
 import org.springframework.http.converter.HttpMessageConverter;
+import org.springframework.util.FileCopyUtils;
 import org.springframework.web.filter.CharacterEncodingFilter;
 
 import com.hp.hpl.jena.tdb.TDBFactory;
@@ -19,6 +24,18 @@ import es.EventSource;
 @Configuration
 public class Config extends WebMvcAutoConfigurationAdapter {
     @Value("${EVENT_SOURCE_URI_PREFIX}") private String uriPrefix;
+
+    @Bean
+    public String datasetHistoryQuery() throws IOException {
+    	Resource resource = new ClassPathResource("/org/drugis/rdf/versioning/datasetHistory.sparql");
+		return FileCopyUtils.copyToString(new InputStreamReader(resource.getInputStream()));
+    }
+    
+    @Bean
+    public String datasetInfoQuery() throws IOException {
+    	Resource resource = new ClassPathResource("/org/drugis/rdf/versioning/datasetInfo.sparql");
+		return FileCopyUtils.copyToString(new InputStreamReader(resource.getInputStream()));
+    }
 	
 	@Bean
 	public EventSource eventSource() {

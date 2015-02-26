@@ -3,9 +3,18 @@ package org.drugis.rdf.versioning.server;
 import java.util.Observable;
 import java.util.Observer;
 
+import com.hp.hpl.jena.graph.Graph;
 import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.graph.NodeFactory;
+import com.hp.hpl.jena.query.DatasetFactory;
+import com.hp.hpl.jena.query.Query;
+import com.hp.hpl.jena.query.QueryExecution;
+import com.hp.hpl.jena.query.QueryExecutionFactory;
+import com.hp.hpl.jena.query.QueryFactory;
 import com.hp.hpl.jena.query.ReadWrite;
+import com.hp.hpl.jena.query.Syntax;
+import com.hp.hpl.jena.rdf.model.Model;
+import com.hp.hpl.jena.sparql.core.Transactional;
 
 import es.DatasetGraphEventSourcing;
 import es.EventSource;
@@ -42,8 +51,22 @@ public class Util {
 		}
 	}
 
-	static DatasetGraphEventSourcing getDataset(EventSource eventSource, String datasetId) {
-		return new DatasetGraphEventSourcing(eventSource, NodeFactory.createURI("http://example.com/datasets/" + datasetId));
+	public static DatasetGraphEventSourcing getDataset(EventSource eventSource, String datasetId) {
+		return new DatasetGraphEventSourcing(eventSource, NodeFactory.createURI(eventSource.getUriPrefix() + "datasets/" + datasetId));
+	}
+
+	public static Graph queryDataStore(EventSource eventSource, String query) {
+		Query theQuery = QueryFactory.create(query, Syntax.syntaxARQ);
+	
+		Transactional transactional = (Transactional)eventSource.getDataStore();
+		transactional.begin(ReadWrite.READ);
+		try {
+			QueryExecution qExec = QueryExecutionFactory.create(theQuery, DatasetFactory.create(eventSource.getDataStore()));
+			Model model = qExec.execConstruct();
+			return model.getGraph();
+		} finally {
+			transactional.end();
+		}
 	}
 
 }

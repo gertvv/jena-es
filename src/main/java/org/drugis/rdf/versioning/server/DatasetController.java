@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
+import com.hp.hpl.jena.graph.Graph;
 import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.graph.NodeFactory;
 import com.hp.hpl.jena.graph.Triple;
@@ -28,6 +29,8 @@ import es.EventSource;
 @RequestMapping("/datasets")
 public class DatasetController {
 	@Autowired EventSource eventSource;
+	@Autowired String datasetInfoQuery;
+	@Autowired String datasetHistoryQuery;
 
 	@Autowired
 	@RequestMapping(value="", method=RequestMethod.GET, produces="text/html")
@@ -58,14 +61,24 @@ public class DatasetController {
 	@ResponseStatus(HttpStatus.CREATED)
 	public void create(HttpServletResponse response) {
 		String id = UUID.randomUUID().toString();
-		Node dataset = NodeFactory.createURI("http://example.com/datasets/" + id);
+		Node dataset = NodeFactory.createURI(eventSource.getUriPrefix() + "datasets/" + id);
 		eventSource.createDatasetIfNotExists(dataset);
 		response.setHeader(HttpHeaders.LOCATION, dataset.getURI());
 	}
 
-	@RequestMapping(value="/{id}", method=RequestMethod.GET, produces="text/html")
+	@RequestMapping(value="/{id}", method=RequestMethod.GET)
 	@ResponseBody
-	public String get(@PathVariable String id) {
-		return id;
+	public Graph get(@PathVariable String id) {
+		String query = datasetInfoQuery.replaceAll("\\$dataset", "<" + eventSource.getUriPrefix() + "datasets/" + id + ">");
+		System.out.println(query);
+		return Util.queryDataStore(eventSource, query);
+	}
+
+	@RequestMapping(value="/{id}/history", method=RequestMethod.GET)
+	@ResponseBody
+	public Graph history(@PathVariable String id) {
+		String query = datasetHistoryQuery.replaceAll("\\$dataset", "<" + eventSource.getUriPrefix() + "datasets/" + id + ">");
+		System.out.println(query);
+		return Util.queryDataStore(eventSource, query);
 	}
 }

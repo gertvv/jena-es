@@ -1,4 +1,4 @@
-DATASET=http://localhost:8080/datasets/d88f36dd-6210-44c1-bb02-6d8f7838061c
+DATASET=http://localhost:8080/datasets/4dedafba-5afd-4755-94d5-a887800a85f0
 DATA=$DATASET/data
 QUERY=$DATASET/query
 UPDATE=$DATASET/update
@@ -100,18 +100,22 @@ curl -H "X-Accept-EventSource-Version: $V1" -H "Content-Type: application/sparql
 
 # Insert some data
 
-$GRAPH=http://example.com/
+GRAPH=http://example.com/
 
-function extract {
+function extractVersion {
   grep "X-EventSource-Version: " | sed 's/X-EventSource-Version: //'
 }
 
-LATEST=$(curl -s -D - -H "Accept: text/turtle" $DATA?graph=$GRAPH -o /dev/null | extract)
+function extractLocation {
+  grep "Location: " | sed 's/Location: //'
+}
+
+LATEST=$(curl -s -D - -H "Accept: text/turtle" $DATA?graph=$GRAPH -o /dev/null | extractVersion)
 
 curl -H "X-Accept-EventSource-Version: $LATEST" -H "Content-Type: application/sparql-update" -D update-new.txt \
   --data "INSERT DATA { GRAPH <http://example.com/> { <a> <b> <c> } }" $UPDATE
 
-UPDATED=$(extract <update-new.txt)
+UPDATED=$(extractVersion <update-new.txt)
 
 curl -H "Accept: text/turtle" -H "X-Accept-EventSource-Version: $LATEST" $DATA?graph=$GRAPH
 curl -H "Accept: text/turtle" -H "X-Accept-EventSource-Version: $UPDATED" $DATA?graph=$GRAPH
@@ -131,4 +135,12 @@ curl -I -H "Accept: text/turtle" $DATA?graph=$GRAPH
 
 # Create a dataset
 
-curl -s -D - -X POST http://localhost:8080/datasets/
+DATASET=$(curl -s -D - -X POST http://localhost:8080/datasets/ -o /dev/null | extractLocation)
+
+# Get latest version info
+
+curl $DATASET
+
+# Get history
+
+curl $DATASET/history
