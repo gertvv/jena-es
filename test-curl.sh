@@ -1,3 +1,48 @@
+set -e # exit on any error
+
+DATASETS=http://localhost:8080/datasets/
+GRAPH=http://example.com/
+
+function checkResponse {
+  read str
+  if [[ $str != "HTTP/1.1 $1"* ]]; then
+    >&2 echo $str
+    >&2 echo "did not match expected ($1)"
+    exit 1
+  fi
+}
+
+function extractVersion {
+  str=$(grep "X-EventSource-Version: " | sed 's/X-EventSource-Version: //')
+  if [ -z "$str" ]; then
+    >&2 echo "NULL version"
+    exit 1
+  fi
+  echo "$str"
+}
+
+function extractLocation {
+  str=$(grep "Location: " | sed 's/Location: //')
+  if [ -z "$str" ]; then
+    >&2 echo "NULL location"
+    exit 1
+  fi
+  echo "$str"
+}
+
+echo "== Create a dataset =="
+
+curl -s -D 00-headers -o 00-body \
+  -X POST $DATASETS
+
+checkResponse 201 < 00-headers
+DATASET=$(extractLocation < 00-headers)
+V0=$(extractVersion < 00-headers)
+
+echo $DATASET $V0
+
+exit 0
+
 DATASET=http://localhost:8080/datasets/4dedafba-5afd-4755-94d5-a887800a85f0
 DATA=$DATASET/data
 QUERY=$DATASET/query
@@ -100,15 +145,6 @@ curl -H "X-Accept-EventSource-Version: $V1" -H "Content-Type: application/sparql
 
 # Insert some data
 
-GRAPH=http://example.com/
-
-function extractVersion {
-  grep "X-EventSource-Version: " | sed 's/X-EventSource-Version: //'
-}
-
-function extractLocation {
-  grep "Location: " | sed 's/Location: //'
-}
 
 LATEST=$(curl -s -D - -H "Accept: text/turtle" $DATA?graph=$GRAPH -o /dev/null | extractVersion)
 
@@ -132,10 +168,6 @@ curl -H "Accept: text/turtle" $DATA?graph=$GRAPH
 curl -s -D - -X DELETE $DATA?graph=$GRAPH
 
 curl -I -H "Accept: text/turtle" $DATA?graph=$GRAPH
-
-# Create a dataset
-
-DATASET=$(curl -s -D - -X POST http://localhost:8080/datasets/ -o /dev/null | extractLocation)
 
 # Get latest version info
 

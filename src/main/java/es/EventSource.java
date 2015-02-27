@@ -300,7 +300,7 @@ public class EventSource {
 		return revisionId;
 	}
 
-	public void createDatasetIfNotExists(Node dataset) {
+	public Node createDatasetIfNotExists(Node dataset) {
 		Transactional trans = (Transactional) d_datastore;
 
 		trans.begin(ReadWrite.READ);
@@ -313,11 +313,14 @@ public class EventSource {
 			Node version = NodeFactory.createURI(VERSION + UUID.randomUUID().toString());
 			addTriple(d_datastore, dataset, esPropertyHead, version);
 			addTriple(d_datastore, version, RDF.Nodes.type, esClassDatasetVersion);
+			addTriple(d_datastore, version, esPropertyDataset, dataset);
 			Node date = NodeFactory.createLiteral(now(), XSDDatatype.XSDdateTime);
 			addTriple(d_datastore, version, dctermsDate, date);
 			addTriple(d_datastore, dataset, dctermsDate, date);
 			trans.commit();
+			return version;
 		}
 
+		return getLatestVersionUri(dataset);
 	}
 }

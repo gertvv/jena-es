@@ -61,8 +61,9 @@ public class DatasetController {
 	public void create(HttpServletResponse response) {
 		String id = UUID.randomUUID().toString();
 		Node dataset = NodeFactory.createURI(eventSource.getUriPrefix() + "datasets/" + id);
-		eventSource.createDatasetIfNotExists(dataset);
+		Node version = eventSource.createDatasetIfNotExists(dataset);
 		response.setHeader(HttpHeaders.LOCATION, dataset.getURI());
+		response.setHeader(ESHeaders.VERSION, version.getURI());
 	}
 
 	@RequestMapping(value="/{id}", method=RequestMethod.GET)
