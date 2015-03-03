@@ -168,7 +168,6 @@ public class DatasetGraphEventSourcing extends DatasetGraphTrackActive implement
 	}
 
 	public DatasetGraph getView(Node version) {
-		// FIXME: assert the version is of this dataset?
-		return d_eventSource.getVersion(version);
+		return d_eventSource.getVersion(d_dataset, version);
 	}
 }

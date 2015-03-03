@@ -22,6 +22,7 @@ import com.hp.hpl.jena.graph.GraphUtil;
 import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.graph.NodeFactory;
 import com.hp.hpl.jena.query.ReadWrite;
+import com.hp.hpl.jena.sparql.core.DatasetGraph;
 
 import es.DatasetGraphEventSourcing;
 import es.EventSource;
@@ -46,7 +47,12 @@ public class GraphStoreController {
 			rval = dataset.getGraph(graph);
 			version = dataset.getLatestEvent().getURI();
 		} else {
-			rval = dataset.getView(NodeFactory.createURI(version)).getGraph(graph);
+			DatasetGraph view = dataset.getView(NodeFactory.createURI(version));
+			if (view == null) {
+				dataset.end();
+				throw new VersionNotFoundException();
+			}
+			rval = view.getGraph(graph);
 		}
 		dataset.end();
 		response.setHeader(ESHeaders.VERSION, version);

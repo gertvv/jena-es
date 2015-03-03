@@ -9,6 +9,7 @@ import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.riot.RDFFormat;
 import org.apache.jena.riot.RDFLanguages;
 import org.apache.jena.riot.RDFWriterRegistry;
+import org.drugis.rdf.versioning.server.Config;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpInputMessage;
 import org.springframework.http.HttpOutputMessage;
@@ -38,8 +39,6 @@ public class JenaGraphMessageConverter extends AbstractHttpMessageConverter<Grap
 		}
 	}
 
-	private String d_base = "http://example.com/"; // FIXME
-
 	@Override
 	protected boolean supports(Class<?> clazz) {
 		return Graph.class.isAssignableFrom(clazz);
@@ -59,7 +58,7 @@ public class JenaGraphMessageConverter extends AbstractHttpMessageConverter<Grap
 	protected Graph readInternal(Class<? extends Graph> clazz, HttpInputMessage inputMessage)
 	throws IOException, HttpMessageNotReadableException {
 		Graph graph = GraphFactory.createGraphMem();
-		RDFDataMgr.read(graph, inputMessage.getBody(), d_base, determineRDFLang(inputMessage.getHeaders()));
+		RDFDataMgr.read(graph, inputMessage.getBody(), Config.BASE_URI, determineRDFLang(inputMessage.getHeaders()));
 		return graph;
 	}
 

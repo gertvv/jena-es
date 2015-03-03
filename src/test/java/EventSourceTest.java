@@ -100,17 +100,21 @@ public class EventSourceTest {
 	@Test
 	public void testGetVersion() {
 		DatasetGraph ds;
-		ds = d_eventSource.getVersion(d_goblinV0Uri);
+		ds = d_eventSource.getVersion(d_goblinDatasetUri, d_goblinV0Uri);
 		checkDatasetEmpty(ds);
 		
-		ds = d_eventSource.getVersion(d_goblinV1Uri);
+		ds = d_eventSource.getVersion(d_goblinDatasetUri, d_goblinV1Uri);
 		checkDatasetAfterEvent1(ds);
 		
-		ds = d_eventSource.getVersion(d_spiderV0Uri);
+		ds = d_eventSource.getVersion(d_spiderDatasetUri, d_spiderV0Uri);
 		checkDatasetAfterEvent1(ds);
 		
-		ds = d_eventSource.getVersion(d_spiderV1Uri);
+		ds = d_eventSource.getVersion(d_spiderDatasetUri, d_spiderV1Uri);
 		checkDatasetAfterEvent2(ds);
+	}
+	
+	public void testGetInvalidVersion() {
+		assertTrue(d_eventSource.getVersion(d_goblinDatasetUri, d_spiderV0Uri) == null);
 	}
 
 	@Test
@@ -121,7 +125,7 @@ public class EventSourceTest {
 	
 	@Test
 	public void testWriteToLog() {
-		DatasetGraph ds = d_eventSource.getVersion(d_spiderDatasetUri);
+		DatasetGraph ds = d_eventSource.getLatestVersion(d_spiderDatasetUri);
 		DatasetGraphDelta delta = new DatasetGraphDelta(ds);
 		applyGraphMod(delta);
 		d_eventSource.writeToLog(d_spiderDatasetUri, delta);

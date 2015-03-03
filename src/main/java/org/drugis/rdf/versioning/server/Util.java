@@ -106,7 +106,6 @@ public class Util {
 			graph.add(new Triple(root, EventSource.dctermsDescription, NodeFactory.createLiteral(description)));
 		}
 		
-		System.out.println(graph);
 		return graph;
 	}
 

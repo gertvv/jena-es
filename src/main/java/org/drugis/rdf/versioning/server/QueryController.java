@@ -39,8 +39,7 @@ public class QueryController {
 			HttpServletResponse response) {
 		final DatasetGraphEventSourcing dataset = Util.getDataset(d_eventSource, datasetId);
 
-		System.out.println(query);
-		Query theQuery = QueryFactory.create(query);
+		Query theQuery = QueryFactory.create(query, Config.BASE_URI);
 		DatasetGraph dsg = dataset;
 		try {
 			dataset.begin(ReadWrite.READ);
@@ -48,6 +47,9 @@ public class QueryController {
 				dsg = dataset.getView(NodeFactory.createURI(version));
 			} else {
 				version = dataset.getLatestEvent().getURI();
+			}
+			if (dsg == null) {
+				throw new VersionNotFoundException();
 			}
 			response.setHeader("X-EventSource-Version", version);
 			response.setHeader("Vary", "Accept, X-Accept-EventSource-Version");

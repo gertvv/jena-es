@@ -1,13 +1,13 @@
+#!/bin/bash
+
 set -e # exit on any error
 
-DATASETS=http://localhost:8080/datasets/
-GRAPH=http://example.com/
+DATASETS="http://localhost:8080/datasets/"
 
 function checkResponse {
-  read str
+  read str <  <(tr -d '\r')
   if [[ $str != "HTTP/1.1 $1"* ]]; then
-    >&2 echo $str
-    >&2 echo "did not match expected ($1)"
+    >&2 echo $str "did not match expected ($1)"
     exit 1
   fi
 }
@@ -18,7 +18,7 @@ function extractVersion {
     >&2 echo "NULL version"
     exit 1
   fi
-  echo "$str"
+  echo "$str" | tr -d '\r'
 }
 
 function extractLocation {
@@ -27,80 +27,137 @@ function extractLocation {
     >&2 echo "NULL location"
     exit 1
   fi
-  echo "$str"
+  echo "$str" | tr -d '\r'
+}
+
+function checkEmpty {
+  if [[ ! -z $(<&0) ]]; then
+    echo "expected empty response"
+    exit 1
+  fi
+}
+
+function checkVersion {
+  expect=$1
+  actual=$(extractVersion)
+  if [ "$expect" != "$actual" ]; then
+    echo "expected versions to be equal"
+    exit 1
+  fi
 }
 
 echo "== Create a dataset =="
 
-curl -s -D 00-headers -o 00-body \
-  -X POST $DATASETS
+curl -s -D 00-headers -o 00-body -X POST $DATASETS
 
 checkResponse 201 < 00-headers
 DATASET=$(extractLocation < 00-headers)
 V0=$(extractVersion < 00-headers)
 
-echo $DATASET $V0
+echo $DATASET
+echo $V0
+
+DATA="$DATASET/data"
+QUERY=${DATASET}/query
+UPDATE=${DATASET}/update
+GRAPH=http://example.com/graph1
+
+echo "== Get (empty) content =="
+
+curl -s -D 01-headers -H "Accept: text/turtle" $DATA?graph=$GRAPH > 01-body
+checkResponse 200 < 01-headers
+checkVersion $V0 < 01-headers
+checkEmpty < 01-body
+
+echo "== Upload content =="
+
+curl -s -D 02-headers -H "Content-Type: text/turtle" $DATA?graph=$GRAPH  \
+  --data "<a> <b> <c>, <d>" > 02-body
+checkResponse 200 < 02-headers
+checkEmpty < 02-body
+V1=$(extractVersion < 02-headers)
+
+echo $V1
+
+echo "== Get new content =="
+
+curl -s -D 03-headers -H "Accept: text/turtle" $DATA?graph=$GRAPH
+checkResponse 200 < 03-headers
+checkVersion $V1 < 03-headers
+
+echo "== Version negotiation =="
+
+curl -s -D 04-headers -H "Accept: text/turtle" -H "X-Accept-EventSource-Version: $V0" $DATA?graph=$GRAPH
+checkResponse 200 < 04-headers
+checkVersion $V0 < 04-headers
+
+curl -s -D 05-headers -H "Accept: text/turtle" -H "X-Accept-EventSource-Version: $V1" $DATA?graph=$GRAPH
+checkResponse 200 < 05-headers
+checkVersion $V1 < 05-headers
+
+curl -s -D 06-headers -H "Accept: text/turtle" -H "X-Accept-EventSource-Version: http://example.com/nonversion" $DATA?graph=$GRAPH
+checkResponse 406 < 06-headers
+
+echo "== Content-type negotiation =="
+
+curl -s -D 07-headers -H "Accept: application/rdf+xml" $DATA?graph=$GRAPH
+checkResponse 200 < 07-headers
+
+curl -s -D 08-headers -H "Accept: audio/ogg" $DATA?graph=$GRAPH
+checkResponse 406 < 08-headers
+
+echo "== SPARQL query =="
+
+curl -G -s -D 09-headers $QUERY \
+  --data-urlencode "query=SELECT * WHERE { GRAPH <$GRAPH> { ?s ?p ?o } }"
+checkResponse 200 < 09-headers
+checkVersion $V1 < 09-headers
+
+echo "== SPARQL query version negotiation =="
+
+curl -G -s -D 10-headers $QUERY -H "X-Accept-EventSource-Version: $V1" \
+  --data-urlencode "query=SELECT * WHERE { GRAPH <$GRAPH> { ?s ?p ?o } }"
+checkResponse 200 < 10-headers
+checkVersion $V1 < 10-headers
+
+curl -G -s -D 11-headers $QUERY -H "X-Accept-EventSource-Version: $V0" \
+  --data-urlencode "query=SELECT * WHERE { GRAPH <$GRAPH> { ?s ?p ?o } }"
+checkResponse 200 < 11-headers
+checkVersion $V0 < 11-headers
+
+curl -G -s -D 12-headers $QUERY -H "X-Accept-EventSource-Version: http://example.com/nonversion" \
+  --data-urlencode "query=SELECT * WHERE { GRAPH <$GRAPH> { ?s ?p ?o } }" > 12-body
+checkResponse 406 < 12-headers
+
+echo "== SPARQL query content-type negotiation =="
+
+curl -G -s -D 13-headers $QUERY -H "Accept: application/sparql-results+json" \
+  --data-urlencode "query=SELECT * WHERE { GRAPH <$GRAPH> { ?s ?p ?o } }"
+checkResponse 200 < 13-headers
+checkVersion $V1 < 13-headers
+
+curl -G -s -D 14-headers $QUERY -H "Accept: application/sparql-results+xml" \
+  --data-urlencode "query=SELECT * WHERE { GRAPH <$GRAPH> { ?s ?p ?o } }"
+checkResponse 200 < 14-headers
+checkVersion $V1 < 14-headers
+
+curl -G -s -D 15-headers $QUERY -H "Accept: text/plain" \
+  --data-urlencode "query=SELECT * WHERE { GRAPH <$GRAPH> { ?s ?p ?o } }"
+checkResponse 200 < 15-headers
+checkVersion $V1 < 15-headers
+
+curl -G -s -D 16-headers $QUERY -H "Accept: audio/ogg" \
+  --data-urlencode "query=SELECT * WHERE { GRAPH <$GRAPH> { ?s ?p ?o } }"
+checkResponse 406 < 16-headers
+
+echo "== CONSTRUCT query =="
+
+curl -G -s -D 17-headers $QUERY \
+  --data-urlencode "query=CONSTRUCT { ?s <x> 3 } WHERE { GRAPH <$GRAPH> { ?s <b> <d> } }"
+checkResponse 200 < 17-headers
+checkVersion $V1 < 17-headers
 
 exit 0
-
-DATASET=http://localhost:8080/datasets/4dedafba-5afd-4755-94d5-a887800a85f0
-DATA=$DATASET/data
-QUERY=$DATASET/query
-UPDATE=$DATASET/update
-GRAPH=http://trials.drugis.org/studies/9c7bb39e-441c-4a64-a6b9-615f51eb046a
-
-V1=http://drugis.org/eventSourcing/event/4818e24b-50fe-42ce-babc-ffe3569e3da5
-V2=http://drugis.org/eventSourcing/event/3156c8c6-df88-4352-9f29-a1dbddfe0278
-LABEL=http://www.w3.org/2000/01/rdf-schema#label
-
-# Content-Type negotiation for graph store retrieval
-
-curl -D headers-current-xml -H "Accept: application/rdf+xml" $DATA?graph=$GRAPH > body-current.xml
-curl -D headers-current-ttl -H "Accept: text/turtle" $DATA?graph=$GRAPH > body-current.ttl
-
-# Version negotiation for graph store retrieval
-
-curl -D headers-v1-ttl -H "Accept: text/turtle" -H "X-Accept-EventSource-Version: $V1" $DATA?graph=$GRAPH > body-v1.ttl
-curl -D headers-v2-ttl -H "Accept: text/turtle" -H "X-Accept-EventSource-Version: $V2" $DATA?graph=$GRAPH > body-v2.ttl
-
-# Simple SPARQL query
-
-curl -G -D headers-current-query \
-  --data-urlencode "query=SELECT * WHERE { GRAPH <$GRAPH> { <$GRAPH> ?p ?o }} LIMIT 10" \
-  $QUERY
-
-# Version negotiation for SPARQL queries
-
-curl -G -H "X-Accept-EventSource-Version: $V1" \
-  --data-urlencode "query=SELECT * WHERE { GRAPH <$GRAPH> { <$GRAPH> <$LABEL> ?o }}" \
-  $QUERY
-
-curl -G -H "X-Accept-EventSource-Version: $V2" \
-  --data-urlencode "query=SELECT * WHERE { GRAPH <$GRAPH> { <$GRAPH> <$LABEL> ?o }}" \
-  $QUERY
-
-# Content-Type negotiation for SPARQL results
-
-curl -G -H "X-Accept-EventSource-Version: $V2" \
-  -H "Accept: application/sparql-results+json" \
-  --data-urlencode "query=SELECT * WHERE { GRAPH <$GRAPH> { <$GRAPH> <$LABEL> ?o }}" \
-  $QUERY
-
-curl -G -H "X-Accept-EventSource-Version: $V2" \
-  -H "Accept: application/sparql-results+xml" \
-  --data-urlencode "query=SELECT * WHERE { GRAPH <$GRAPH> { <$GRAPH> <$LABEL> ?o }}" \
-  $QUERY
-
-curl -G -H "X-Accept-EventSource-Version: $V2" \
-  -H "Accept: text/plain" \
-  --data-urlencode "query=SELECT * WHERE { GRAPH <$GRAPH> { <$GRAPH> <$LABEL> ?o }}" \
-  $QUERY
-
-# Construct query
-
-curl -G -H "Accept: application/rdf+xml" \
-  --data-urlencode "query=CONSTRUCT { <$GRAPH> ?p ?o } WHERE { GRAPH <$GRAPH> { <$GRAPH> ?p ?o }}" \
-  $QUERY
 
 # Ask queries
 

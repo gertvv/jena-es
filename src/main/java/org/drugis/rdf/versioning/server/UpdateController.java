@@ -24,8 +24,6 @@ import es.EventSource;
 public class UpdateController {
 	@Autowired EventSource d_eventSource;
 
-	private static final String UpdateParseBase = "http://example/update-base/"; // FIXME
-
 	@RequestMapping(method=RequestMethod.POST, consumes="application/sparql-update")
 	public Object update(
 			@PathVariable String datasetId,
@@ -40,7 +38,7 @@ public class UpdateController {
 			@Override
 			public void run() {
 				try {
-					UpdateAction.parseExecute(usingList, dataset, request.getInputStream(), UpdateParseBase, Syntax.syntaxARQ);
+					UpdateAction.parseExecute(usingList, dataset, request.getInputStream(), Config.BASE_URI, Syntax.syntaxARQ);
 				} catch (IOException e) {
 					throw new RuntimeException(e);
 				}

@@ -23,7 +23,8 @@ import es.EventSource;
 
 @Configuration
 public class Config extends WebMvcAutoConfigurationAdapter {
-    @Value("${EVENT_SOURCE_URI_PREFIX}") private String uriPrefix;
+    public static final String BASE_URI = "http://example.com/"; // FIXME
+	@Value("${EVENT_SOURCE_URI_PREFIX}") private String uriPrefix;
 
     @Bean
     public String datasetHistoryQuery() throws IOException {

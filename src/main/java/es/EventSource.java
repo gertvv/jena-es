@@ -116,7 +116,10 @@ public class EventSource {
 		return map;
 	}
 
-	public DatasetGraph getVersion(Node version) {
+	public DatasetGraph getVersion(Node dataset, Node version) {
+		if (!versionExists(dataset, version)) {
+			return null;
+		}
 		DatasetGraph ds = DatasetGraphFactory.createMem();
 		for (Map.Entry<Node, Node> entry : getGraphRevisions(d_datastore, version).entrySet()) {
 			Node graphName = entry.getKey();
@@ -127,8 +130,19 @@ public class EventSource {
 		return ds;
 	}
 	
+	private boolean versionExists(Node dataset, Node version) {
+		Node current = getUniqueObject(d_datastore.getDefaultGraph().find(dataset, esPropertyHead, Node.ANY));
+		while (!version.equals(current)) {
+			current = getUniqueOptionalObject(d_datastore.getDefaultGraph().find(current, esPropertyPrevious, Node.ANY));
+			if (current == null) {
+				return false;
+			}
+		}
+		return true;
+	}
+
 	public DatasetGraph getLatestVersion(Node dataset) {
-		return getVersion(getLatestVersionUri(dataset));
+		return getVersion(dataset, getLatestVersionUri(dataset));
 	}
 
 	public Graph getRevision(Node revision) {
