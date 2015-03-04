@@ -46,6 +46,14 @@ function checkVersion {
   fi
 }
 
+function checkEqual {
+  expect="$1"
+  actual="$2"
+  if [ "$actual" != "$expect" ]; then
+    echo "Expected \'$expect\', got \'$actual\'"; exit 1;
+  fi
+}
+
 echo "== Create a dataset =="
 
 curl -s -D 00-headers -o 00-body -X POST $DATASETS
@@ -157,61 +165,80 @@ curl -G -s -D 17-headers $QUERY \
 checkResponse 200 < 17-headers
 checkVersion $V1 < 17-headers
 
+curl -G -s -D 18-headers $QUERY -H "Accept: application/rdf+xml" \
+  -H "X-Accept-EventSource-Version: $V0" \
+  --data-urlencode "query=CONSTRUCT { ?s <x> 3 } WHERE { GRAPH <$GRAPH> { ?s <b> <d> } }"
+checkResponse 200 < 18-headers
+checkVersion $V0 < 18-headers
+
+echo "== ASK query =="
+
+curl -G -s -D 19-headers $QUERY -H "Accept: text/plain" \
+  -H "X-Accept-EventSource-Version: $V0" \
+  --data-urlencode "query=ASK { GRAPH <$GRAPH> { ?s <b> <d> } }" > 19-body
+checkResponse 200 < 19-headers
+checkVersion $V0 < 19-headers
+checkEqual "no" $(< 19-body)
+
+curl -G -s -D 20-headers $QUERY -H "Accept: text/plain" \
+  -H "X-Accept-EventSource-Version: $V1" \
+  --data-urlencode "query=ASK { GRAPH <$GRAPH> { ?s <b> <d> } }" > 20-body
+checkResponse 200 < 20-headers
+checkVersion $V1 < 20-headers
+checkEqual "yes" $(< 20-body)
+
+curl -G -s -D 21-headers $QUERY -H "Accept: application/sparql-results+json" \
+  --data-urlencode "query=ASK { GRAPH <$GRAPH> { ?s <b> <d> } }" > 21-body
+checkResponse 200 < 21-headers
+checkVersion $V1 < 21-headers
+
+curl -G -s -D 22-headers $QUERY -H "Accept: application/sparql-results+xml" \
+  --data-urlencode "query=ASK { GRAPH <$GRAPH> { ?s <b> <d> } }" > 22-body
+checkResponse 200 < 22-headers
+checkVersion $V1 < 22-headers
+
+echo "== DESCRIBE query =="
+
+curl -G -H "Accept: text/turtle" $QUERY \
+  --data-urlencode "query=DESCRIBE <$GRAPH>"
+# TODO
+
+echo "== Invalid query =="
+
+curl -G -s -D 24-headers $QUERY \
+  --data-urlencode "query=PREFIX foaf: <http://xmlns.com/foaf/0.1/> SELECT ?name WHERE { ?x foaf:name ?name ORDER BY ?name }"
+checkResponse 400 < 24-headers
+
+echo "== Invalid update =="
+
+curl -D 25-headers $UPDATE -H "Content-Type: application/sparql-update" \
+  --data "PREFIX foaf: <http://xmlns.com/foa/> SELECT ?name WHERE { ?x foaf:name ?name ORDER BY ?name }"
+checkResponse 400 < 25-headers
+
+echo "== Update conflict =="
+
+curl -D 26-headers $UPDATE \
+  -H "X-Accept-EventSource-Version: $V0" -H "Content-Type: application/sparql-update" \
+  --data "INSERT DATA { <a> <b> <c> }"
+echo
+checkResponse 409 < 26-headers
+
+echo "== Insert data =="
+
+curl -D 27-headers $UPDATE \
+  -H "X-Accept-EventSource-Version: $V1" -H "Content-Type: application/sparql-update" \
+  --data "INSERT DATA { GRAPH <$GRAPH> { <a> <b> <e> } }"
+checkResponse 200 < 27-headers
+V2=$(extractVersion < 27-headers)
+echo $V2
+
+curl -G -s -D 28-headers $QUERY -H "Accept: text/plain" \
+  --data-urlencode "query=ASK { GRAPH <$GRAPH> { ?s <b> <e> } }" > 28-body
+checkResponse 200 < 28-headers
+checkVersion $V2 < 28-headers
+checkEqual "yes" $(< 28-body)
+
 exit 0
-
-# Ask queries
-
-## Should return true
-curl -G -H "X-Accept-EventSource-Version: $V2" \
-  -H "Accept: text/plain" \
-  --data-urlencode "query=ASK { GRAPH <$GRAPH> { <$GRAPH> <$LABEL> \"De Nayer, A et al, 2002\" }}" \
-  $QUERY
-
-## Should return false
-curl -G -H "X-Accept-EventSource-Version: $V2" \
-  -H "Accept: application/sparql-results+json" \
-  --data-urlencode "query=ASK { GRAPH <$GRAPH> { <$GRAPH> <$LABEL> \"De Nayer et al, 2002\" }}" \
-  $QUERY
-
-## Should return true 
-curl -G -H "X-Accept-EventSource-Version: $V1" \
-  -H "Accept: application/sparql-results+xml" \
-  --data-urlencode "query=ASK { GRAPH <$GRAPH> { <$GRAPH> <$LABEL> \"De Nayer et al, 2002\" }}" \
-  $QUERY
-
-# Describe query
-
-curl -G -H "X-Accept-EventSource-Version: $V2" \
-  -H "Accept: text/turtle" \
-  --data-urlencode "query=DESCRIBE <$GRAPH>" \
-  $QUERY
-
-# Invalid query (expect a 400 Bad Request + explanatory text body)
-
-curl -G -D invalid-query.txt \
-  --data-urlencode "query=PREFIX foaf: <http://xmlns.com/foaf/0.1/> SELECT ?name WHERE { ?x foaf:name ?name ORDER BY ?name }" \
-  $QUERY
-
-curl -H "Content-Type: application/sparql-update" -D invalid-update.txt \
-  --data "PREFIX foaf: <http://xmlns.com/foa/> SELECT ?name WHERE { ?x foaf:name ?name ORDER BY ?name }" $UPDATE
-
-# Update old version (expect 409 Conflict)
-
-curl -H "X-Accept-EventSource-Version: $V1" -H "Content-Type: application/sparql-update" -D update-old.txt \
-  --data "INSERT DATA { <a> <b> <c> }" $UPDATE
-
-# Insert some data
-
-
-LATEST=$(curl -s -D - -H "Accept: text/turtle" $DATA?graph=$GRAPH -o /dev/null | extractVersion)
-
-curl -H "X-Accept-EventSource-Version: $LATEST" -H "Content-Type: application/sparql-update" -D update-new.txt \
-  --data "INSERT DATA { GRAPH <http://example.com/> { <a> <b> <c> } }" $UPDATE
-
-UPDATED=$(extractVersion <update-new.txt)
-
-curl -H "Accept: text/turtle" -H "X-Accept-EventSource-Version: $LATEST" $DATA?graph=$GRAPH
-curl -H "Accept: text/turtle" -H "X-Accept-EventSource-Version: $UPDATED" $DATA?graph=$GRAPH
 
 curl -s -D - -X PUT -H "Content-Type: text/turtle" -H "X-Accept-EventSource-Version: $UPDATED" \
   --data "<a> <b> <d>" $DATA?graph=$GRAPH
