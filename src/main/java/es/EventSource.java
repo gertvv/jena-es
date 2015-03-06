@@ -23,6 +23,7 @@ import com.hp.hpl.jena.graph.compose.Union;
 import com.hp.hpl.jena.query.ReadWrite;
 import com.hp.hpl.jena.sparql.core.DatasetGraph;
 import com.hp.hpl.jena.sparql.core.DatasetGraphFactory;
+import com.hp.hpl.jena.sparql.core.Quad;
 import com.hp.hpl.jena.sparql.core.Transactional;
 import com.hp.hpl.jena.sparql.graph.GraphFactory;
 import com.hp.hpl.jena.vocabulary.RDF;
@@ -106,13 +107,21 @@ public class EventSource {
 	
 	private static Map<Node, Node> getGraphRevisions(DatasetGraph eventSource, Node version) {
 		Map<Node, Node> map = new HashMap<Node, Node>();
+		
+		// Named graphs
 		for (Iterator<Triple> triples = eventSource.getDefaultGraph().find(version, esPropertyGraphRevision, Node.ANY); triples.hasNext(); ) {
 			Node graphRevision = triples.next().getObject();
 			Node graphName = getUniqueObject(eventSource.getDefaultGraph().find(graphRevision, esPropertyGraph, Node.ANY));
 			Node revision = getUniqueObject(eventSource.getDefaultGraph().find(graphRevision, esPropertyRevision, Node.ANY));
 			map.put(graphName, revision);
 		}
-		// TODO default graph
+		
+		// Default graph
+		Node graphRevision = getUniqueOptionalObject(eventSource.getDefaultGraph().find(version, esPropertyDefaultGraphRevision, Node.ANY));
+		if (graphRevision != null) {
+			Node revision = getUniqueObject(eventSource.getDefaultGraph().find(graphRevision, esPropertyRevision, Node.ANY));
+			map.put(Quad.defaultGraphNodeGenerated, revision);
+		}
 		return map;
 	}
 
@@ -125,7 +134,11 @@ public class EventSource {
 			Node graphName = entry.getKey();
 			Node revision = entry.getValue();
 			Graph graph = getRevision(revision);
-			ds.addGraph(graphName, graph);
+			if (graphName.equals(Quad.defaultGraphNodeGenerated)) {
+				ds.setDefaultGraph(graph);
+			} else {
+				ds.addGraph(graphName, graph);
+			}
 		}
 		return ds;
 	}
@@ -216,19 +229,27 @@ public class EventSource {
 
 		Map<Node, Node> previousRevisions = getGraphRevisions(d_datastore, previous);
 		for (Iterator<Node> graphs = event.listGraphNodes(); graphs.hasNext(); ) {
-			Node graph = graphs.next();
-			if (!event.getModifications().containsKey(graph)) {
-				addGraphRevision(d_datastore, version, graph, previousRevisions.get(graph));
-			} else if (!event.getGraph(graph).isEmpty()) {
-				addGraphRevision(d_datastore, version, graph, writeRevision(event.getModifications().get(graph), graph, previousRevisions.get(graph)));
-			}
+			writeGraphRevision(event, version, previousRevisions, graphs.next());
 		}
+		writeGraphRevision(event, version, previousRevisions, Quad.defaultGraphNodeGenerated);
 		
 		addTriple(d_datastore, version, esPropertyPrevious, previous);
 		d_datastore.getDefaultGraph().remove(dataset, esPropertyHead, previous);
 		addTriple(d_datastore, dataset, esPropertyHead, version);
 		
 		return version;
+	}
+
+	private void writeGraphRevision(DatasetGraphDelta event, Node version, Map<Node, Node> previousRevisions, Node graph) {
+		if (event.getGraph(graph).isEmpty()) {
+			return;
+		}
+
+		if (!event.getModifications().containsKey(graph)) {
+			addGraphRevision(d_datastore, version, graph, previousRevisions.get(graph));
+		} else {
+			addGraphRevision(d_datastore, version, graph, writeRevision(event.getModifications().get(graph), graph, previousRevisions.get(graph)));
+		}
 	}
 
 	/**
@@ -275,8 +296,12 @@ public class EventSource {
 	 */
 	private static void addGraphRevision(DatasetGraph eventSource, Node version, Node graph, Node revision) {
 		Node graphRevision = NodeFactory.createAnon();
-		addTriple(eventSource, version, esPropertyGraphRevision, graphRevision);
-		addTriple(eventSource, graphRevision, esPropertyGraph, graph);
+		if (graph.equals(Quad.defaultGraphNodeGenerated)) {
+			addTriple(eventSource, version, esPropertyDefaultGraphRevision, graphRevision);
+		} else {
+			addTriple(eventSource, version, esPropertyGraphRevision, graphRevision);
+			addTriple(eventSource, graphRevision, esPropertyGraph, graph);
+		}
 		addTriple(eventSource, graphRevision, esPropertyRevision, revision);
 	}
 

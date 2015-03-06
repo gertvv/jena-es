@@ -223,7 +223,7 @@ curl -D 26-headers $UPDATE \
 echo
 checkResponse 409 < 26-headers
 
-echo "== Insert data =="
+echo "== Update query =="
 
 curl -D 27-headers $UPDATE \
   -H "X-Accept-EventSource-Version: $V1" -H "Content-Type: application/sparql-update" \
@@ -238,20 +238,128 @@ checkResponse 200 < 28-headers
 checkVersion $V2 < 28-headers
 checkEqual "yes" $(< 28-body)
 
+echo "== Graph store PUT =="
+
+curl -s -D 29-headers -X PUT $DATA?graph=$GRAPH \
+  -H "Content-Type: text/turtle" -H "X-Accept-EventSource-Version: $V2" \
+  --data "<x> <y> <z>" 
+checkResponse 200 < 29-headers
+V3=$(extractVersion < 29-headers)
+echo $V3
+
+curl -G -s -D 30-headers $QUERY -H "Accept: text/plain" \
+  --data-urlencode "query=ASK { GRAPH <$GRAPH> { ?s <b> <e> } }" > 30-body
+checkResponse 200 < 30-headers
+checkVersion $V3 < 30-headers
+checkEqual "no" $(< 30-body)
+
+curl -G -s -D 31-headers $QUERY -H "Accept: text/plain" \
+  --data-urlencode "query=ASK { GRAPH <$GRAPH> { <x> <y> <z> } }" > 31-body
+checkResponse 200 < 31-headers
+checkVersion $V3 < 31-headers
+checkEqual "yes" $(< 31-body)
+
+echo "== Graph store POST =="
+
+curl -s -D 32-headers -X POST $DATA?graph=$GRAPH \
+  -H "Content-Type: text/turtle" -H "X-Accept-EventSource-Version: $V3" \
+  --data "<d> <e> <f>" 
+checkResponse 200 < 32-headers
+V4=$(extractVersion < 32-headers)
+echo $V4
+
+curl -G -s -D 33-headers $QUERY -H "Accept: text/plain" \
+  --data-urlencode "query=ASK { GRAPH <$GRAPH> { <x> <y> <z> . <d> <e> <f> . } }" > 33-body
+checkResponse 200 < 33-headers
+checkVersion $V4 < 33-headers
+checkEqual "yes" $(< 33-body)
+
+echo "== Graph store GET =="
+
+curl -s -D 34-headers -X GET $DATA?graph=$GRAPH \
+  -H "Accept: text/turtle" -H "X-Accept-EventSource-Version: $V3"
+checkResponse 200 < 34-headers
+
+curl -s -D 35-headers -X GET $DATA?graph=$GRAPH \
+  -H "Accept: text/turtle" -H "X-Accept-EventSource-Version: $V4"
+checkResponse 200 < 35-headers
+
+curl -s -D 36-headers -X GET $DATA?graph=$GRAPH \
+  -H "Accept: application/rdf+xml" -H "X-Accept-EventSource-Version: $V4"
+checkResponse 200 < 36-headers
+
+echo "== Graph store HEAD =="
+
+curl -s -D 37-headers -I $DATA?graph=$GRAPH \
+  -H "Accept: application/rdf+xml" -H "X-Accept-EventSource-Version: $V4"
+checkResponse 200 < 37-headers
+
+echo "== Graph store DELETE =="
+
+curl -s -D 38-headers -X DELETE $DATA?graph=$GRAPH \
+  -H "X-Accept-EventSource-Version: $V4"
+checkResponse 200 < 38-headers
+V5=$(extractVersion < 38-headers)
+echo $V5
+
+curl -s -D 39-headers -X GET $DATA?graph=$GRAPH \
+  -H "Accept: application/rdf+xml" > 39-body
+checkResponse 200 < 39-headers
+checkVersion $V5 < 39-headers
+checkEmpty < 39-body
+
+echo "== GET default graph =="
+
+curl -s -D 40-headers -X GET $DATA?default \
+  -H "Accept: text/turtle" -H "X-Accept-EventSource-Version: $V3"
+checkResponse 200 < 40-headers
+
+echo "== PUT default graph =="
+
+curl -s -D 41-headers -X PUT $DATA?default \
+  -H "Content-Type: text/turtle" -H "X-Accept-EventSource-Version: $V5" \
+  --data "<x> <y> <z>" 
+checkResponse 200 < 41-headers
+V6=$(extractVersion < 41-headers)
+echo $V6
+
+curl -s -D 42-headers -X GET $DATA?default \
+  -H "Accept: text/turtle"
+checkResponse 200 < 42-headers
+checkVersion $V6 < 42-headers
+
+echo "== POST default graph =="
+
+curl -s -D 43-headers -X PUT $DATA?default \
+  -H "Content-Type: text/turtle" -H "X-Accept-EventSource-Version: $V6" \
+  --data "<x> <y> <a>" 
+checkResponse 200 < 43-headers
+V7=$(extractVersion < 43-headers)
+echo $V7
+
+curl -s -D 44-headers -X GET $DATA?default \
+  -H "Accept: text/turtle"
+checkResponse 200 < 44-headers
+checkVersion $V7 < 44-headers
+
+echo "== DELETE default graph =="
+
+curl -s -D 45-headers -X DELETE $DATA?default \
+  -H "X-Accept-EventSource-Version: $V7"
+checkResponse 200 < 45-headers
+V8=$(extractVersion < 45-headers)
+echo $V8
+
+curl -s -D 46-headers -X GET $DATA?default \
+  -H "Accept: text/turtle"
+checkResponse 200 < 46-headers
+checkVersion $V8 < 46-headers
+
 exit 0
 
-curl -s -D - -X PUT -H "Content-Type: text/turtle" -H "X-Accept-EventSource-Version: $UPDATED" \
-  --data "<a> <b> <d>" $DATA?graph=$GRAPH
+# TODO: update default graph through SPARQL
 
-curl -H "Accept: text/turtle" $DATA?graph=$GRAPH
-
-curl -s -D - -X POST -H "Content-Type: text/turtle" --data "<a> <b> <e>" $DATA?graph=$GRAPH
-
-curl -H "Accept: text/turtle" $DATA?graph=$GRAPH
-
-curl -s -D - -X DELETE $DATA?graph=$GRAPH
-
-curl -I -H "Accept: text/turtle" $DATA?graph=$GRAPH
+# TODO: invalid graph store updates (e.g. wrong version)
 
 # Get latest version info
 
@@ -261,6 +369,7 @@ curl $DATASET
 
 curl $DATASET/history
 
+# Commit meta-data
 
 curl -s -D - -X POST -H "Content-Type: text/turtle" \
   -H "X-EventSource-Creator: http://example.com/PeterParker" \

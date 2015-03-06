@@ -23,6 +23,7 @@ import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.graph.NodeFactory;
 import com.hp.hpl.jena.query.ReadWrite;
 import com.hp.hpl.jena.sparql.core.DatasetGraph;
+import com.hp.hpl.jena.sparql.graph.GraphFactory;
 
 import es.DatasetGraphEventSourcing;
 import es.EventSource;
@@ -40,11 +41,11 @@ public class GraphStoreController {
 			@RequestHeader(value=ESHeaders.ACCEPT_VERSION, required=false) String version,
 			HttpServletResponse response) {
 		final DatasetGraphEventSourcing dataset = getDataset(datasetId);
-		Node graph = NodeFactory.createURI(determineTargetGraph(params).getUri());
+		TargetGraph target = determineTargetGraph(params);
 		dataset.begin(ReadWrite.READ);
 		Graph rval;
 		if (version == null) {
-			rval = dataset.getGraph(graph);
+			rval = target.get(dataset);
 			version = dataset.getLatestEvent().getURI();
 		} else {
 			DatasetGraph view = dataset.getView(NodeFactory.createURI(version));
@@ -52,7 +53,7 @@ public class GraphStoreController {
 				dataset.end();
 				throw new VersionNotFoundException();
 			}
-			rval = view.getGraph(graph);
+			rval = target.get(view);
 		}
 		dataset.end();
 		response.setHeader(ESHeaders.VERSION, version);
@@ -69,11 +70,11 @@ public class GraphStoreController {
 			HttpServletRequest request,
 			HttpServletResponse response) {
 		final DatasetGraphEventSourcing dataset = getDataset(datasetId);
-		final Node target = NodeFactory.createURI(determineTargetGraph(params).getUri());
+		final TargetGraph target = determineTargetGraph(params);
 		Runnable action = new Runnable() {
 			@Override
 			public void run() {
-				dataset.addGraph(target, graph);
+				target.set(dataset, graph);
 			}
 		};
 		String newVersion = Util.runReturningVersion(dataset, version, action, Util.versionMetaData(request));
@@ -89,11 +90,11 @@ public class GraphStoreController {
 			HttpServletRequest request,
 			HttpServletResponse response) {
 		final DatasetGraphEventSourcing dataset = getDataset(datasetId);
-		final Node target = NodeFactory.createURI(determineTargetGraph(params).getUri());
+		final TargetGraph target = determineTargetGraph(params);
 		Runnable action = new Runnable() {
 			@Override
 			public void run() {
-				GraphUtil.addInto(dataset.getGraph(target), graph);
+				GraphUtil.addInto(target.get(dataset), graph);
 			}
 		};
 		String newVersion = Util.runReturningVersion(dataset, version, action, Util.versionMetaData(request));
@@ -108,11 +109,11 @@ public class GraphStoreController {
 			HttpServletRequest request,
 			HttpServletResponse response) {
 		final DatasetGraphEventSourcing dataset = getDataset(datasetId);
-		final Node target = NodeFactory.createURI(determineTargetGraph(params).getUri());
+		final TargetGraph target = determineTargetGraph(params);
 		Runnable action = new Runnable() {
 			@Override
 			public void run() {
-				dataset.removeGraph(target);
+				target.remove(dataset);
 			}
 		};
 		String newVersion = Util.runReturningVersion(dataset, version, action, Util.versionMetaData(request));
@@ -123,10 +124,26 @@ public class GraphStoreController {
 		return Util.getDataset(d_eventSource, datasetId);
 	}
 
-	static class TargetGraph {
+	static abstract class TargetGraph {
 		public String getUri() {
 			return null;
 		}
+
+		/**
+		 * Remove the target graph.
+		 */
+		abstract public void remove(DatasetGraphEventSourcing dataset);
+
+		/**
+		 * Get the contents of the target graph.
+		 */
+		abstract public Graph get(DatasetGraph dsg);
+
+		/**
+		 * Set the contents of the target graph.
+		 */
+		abstract public void set(DatasetGraphEventSourcing dataset, Graph graph);
+
 		public boolean isDefault() {
 			return false;
 		}
@@ -137,25 +154,54 @@ public class GraphStoreController {
 		public boolean isDefault() {
 			return true;
 		}
+
+		@Override
+		public Graph get(DatasetGraph dsg) {
+			return dsg.getDefaultGraph();
+		}
+
+		@Override
+		public void set(DatasetGraphEventSourcing dataset, Graph graph) {
+			dataset.setDefaultGraph(graph);
+		}
+
+		@Override
+		public void remove(DatasetGraphEventSourcing dataset) {
+			dataset.setDefaultGraph(GraphFactory.createGraphMem());
+		}
 	}
 	
 	static class NamedGraph extends TargetGraph {
-		private String d_uri;
+		private Node d_graphNode;
 
 		public NamedGraph(String uri) {
-			d_uri = uri;
+			d_graphNode = NodeFactory.createURI(uri);
 		}
 		
 		@Override
 		public String getUri() {
-			return d_uri;
+			return d_graphNode.getURI();
+		}
+
+		@Override
+		public Graph get(DatasetGraph dsg) {
+			return dsg.getGraph(d_graphNode);
+		}
+
+		@Override
+		public void set(DatasetGraphEventSourcing dataset, Graph graph) {
+			dataset.addGraph(d_graphNode, graph);
+		}
+
+		@Override
+		public void remove(DatasetGraphEventSourcing dataset) {
+			dataset.removeGraph(d_graphNode);
 		}
 	}
 	
 	private static TargetGraph determineTargetGraph(Map<String, String> params) {
 		if (params.keySet().equals(Collections.singleton("default")) && params.get("default").equals("")) {
-			throw new NotImplementedException("Accessing default graph not (yet) implemented");
-			//return new DefaultGraph();
+			return new DefaultGraph();
 		} else if (params.keySet().equals(Collections.singleton("graph"))) {
 			return new NamedGraph(params.get("graph"));
 		} else {
