@@ -248,7 +248,7 @@ public class EventSource {
 		if (!event.getModifications().containsKey(graph)) {
 			addGraphRevision(d_datastore, version, graph, previousRevisions.get(graph));
 		} else {
-			addGraphRevision(d_datastore, version, graph, writeRevision(event.getModifications().get(graph), graph, previousRevisions.get(graph)));
+			addGraphRevision(d_datastore, version, graph, writeRevision(event.getModifications().get(graph), previousRevisions.get(graph)));
 		}
 	}
 
@@ -316,7 +316,7 @@ public class EventSource {
 	/**
 	 * Write a revision to the log.
 	 */
-	private Node writeRevision(Delta delta, Node graph, Node previousRevision) {
+	private Node writeRevision(Delta delta, Node previousRevision) {
 		String revId = UUID.randomUUID().toString();
 		Node revisionId = NodeFactory.createURI(REVISION + revId);
 		Node assertId = NodeFactory.createURI(ASSERT + revId);
@@ -347,19 +347,35 @@ public class EventSource {
 		trans.end();
 
 		if (!exists) {
-			trans.begin(ReadWrite.WRITE);
-			addTriple(d_datastore, dataset, RDF.Nodes.type, esClassDataset);
-			Node version = NodeFactory.createURI(VERSION + UUID.randomUUID().toString());
-			addTriple(d_datastore, dataset, esPropertyHead, version);
-			addTriple(d_datastore, version, RDF.Nodes.type, esClassDatasetVersion);
-			addTriple(d_datastore, version, esPropertyDataset, dataset);
-			Node date = NodeFactory.createLiteral(now(), XSDDatatype.XSDdateTime);
-			addTriple(d_datastore, version, dctermsDate, date);
-			addTriple(d_datastore, dataset, dctermsDate, date);
-			trans.commit();
-			return version;
+			return createDataset(dataset, null, GraphFactory.createGraphMem());
 		}
 
 		return getLatestVersionUri(dataset);
+	}
+	
+	public Node createDataset(Node dataset, Graph defaultGraphContent, Graph meta) {
+		Transactional trans = (Transactional) d_datastore;
+		trans.begin(ReadWrite.WRITE);
+		
+		addTriple(d_datastore, dataset, RDF.Nodes.type, esClassDataset);
+		Node version = NodeFactory.createURI(VERSION + UUID.randomUUID().toString());
+		addTriple(d_datastore, dataset, esPropertyHead, version);
+		addTriple(d_datastore, version, RDF.Nodes.type, esClassDatasetVersion);
+		addTriple(d_datastore, version, esPropertyDataset, dataset);
+		Node date = NodeFactory.createLiteral(now(), XSDDatatype.XSDdateTime);
+		addTriple(d_datastore, version, dctermsDate, date);
+		addTriple(d_datastore, dataset, dctermsDate, date);
+		
+		addMetaData(d_datastore, meta, version, esClassDatasetVersion);
+		
+		if (defaultGraphContent != null) {
+			Delta delta = new Delta(GraphFactory.createGraphMem());
+			GraphUtil.addInto(delta, defaultGraphContent);
+			Node revision = writeRevision(delta, null);
+			addGraphRevision(d_datastore, version, Quad.defaultGraphNodeGenerated, revision);
+		}
+		
+		trans.commit();
+		return version;
 	}
 }

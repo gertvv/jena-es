@@ -355,6 +355,23 @@ curl -s -D 46-headers -X GET $DATA?default \
 checkResponse 200 < 46-headers
 checkVersion $V8 < 46-headers
 
+echo "== Create dataset with default graph content"
+
+curl -s -D 47-headers -H "Content-Type: text/turtle" $DATASETS  \
+  --data "<d> <e> <f>" > 47-body
+checkResponse 201 < 47-headers
+checkEmpty < 47-body
+D2=$(extractLocation < 47-headers)
+D2_V0=$(extractVersion < 47-headers)
+
+echo $D2
+echo $D2_V0
+
+curl -s -D 48-headers -X GET $D2/data?default \
+  -H "Accept: text/turtle"
+checkResponse 200 < 48-headers
+checkVersion $D2_V0 < 48-headers
+
 exit 0
 
 # TODO: update default graph through SPARQL
