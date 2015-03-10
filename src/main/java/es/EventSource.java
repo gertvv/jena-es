@@ -257,6 +257,9 @@ public class EventSource {
 	 */
 	private static void addMetaData(DatasetGraph eventSource, Graph meta, Node resource, Node resourceClass) {
 		Node root = getMetaDataRoot(meta, resourceClass);
+		if (root == null) {
+			return;
+		}
 		
 		// Restrict meta-data to describing the current event only
 		meta = (new GraphExtract(TripleBoundary.stopNowhere)).extract(root, meta);
@@ -283,15 +286,15 @@ public class EventSource {
 	private static Node getMetaDataRoot(Graph meta, Node resourceClass) {
 		Set<Triple> metaRoots = meta.find(Node.ANY, RDF.Nodes.type, resourceClass).toSet();
 
-		Node root = null;
 		if (metaRoots.size() == 1) {
-			root = metaRoots.iterator().next().getSubject();
-		} else {
-			throw new IllegalStateException(
+			return metaRoots.iterator().next().getSubject();
+		} else if (metaRoots.size() == 0) {
+			return null;
+		}
+		
+		throw new IllegalStateException(
 					"The supplied meta-data must have at most one resource of class "
 					+ resourceClass.getURI() + " but found " + metaRoots.size());
-		}
-		return root;
 	}
 
 	/**
@@ -374,7 +377,7 @@ public class EventSource {
 
 		addMetaData(d_datastore, meta, version, esClassDatasetVersion);
 		Node root = getMetaDataRoot(meta, esClassDatasetVersion);
-		Node creator = getUniqueOptionalObject(meta.find(root, dctermsCreator, Node.ANY));
+		Node creator = root == null ? null : getUniqueOptionalObject(meta.find(root, dctermsCreator, Node.ANY));
 		if (creator != null) {
 			addTriple(d_datastore, dataset, dctermsCreator, creator);
 		}
