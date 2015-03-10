@@ -372,6 +372,21 @@ curl -s -D 48-headers -X GET $D2/data?default \
 checkResponse 200 < 48-headers
 checkVersion $D2_V0 < 48-headers
 
+echo "== Create dataset with commit meta-data"
+
+CREATOR="http://example.com/SomeAuthor"
+TITLE=$(echo -n "This is a title brå" | base64)
+DESCRIPTION=$(echo -e "This is a long description\nWith newlines!" | base64)
+
+curl -s -D 49-headers -X POST $DATASETS \
+  -H "X-EventSource-Creator: $CREATOR" \
+  -H "X-EventSource-Title: $TITLE" \
+  -H "X-EventSource-Description: $DESCRIPTION"
+D3=$(extractLocation < 49-headers)
+D3_V0=$(extractVersion < 49-headers)
+
+curl $D3
+
 exit 0
 
 # TODO: update default graph through SPARQL

@@ -256,36 +256,42 @@ public class EventSource {
 	 * Add meta-data to a resource. Filters the given meta-data graph.
 	 */
 	private static void addMetaData(DatasetGraph eventSource, Graph meta, Node resource, Node resourceClass) {
-		// If meta-data is supplied, add it to the event log
+		Node root = getMetaDataRoot(meta, resourceClass);
+		
+		// Restrict meta-data to describing the current event only
+		meta = (new GraphExtract(TripleBoundary.stopNowhere)).extract(root, meta);
+		
+		// Prevent the setting of predicates we set ourselves
+		meta.remove(root, RDF.Nodes.type, Node.ANY);
+		meta.remove(root, EventSource.esPropertyHead, Node.ANY);
+		meta.remove(root, EventSource.esPropertyPrevious, Node.ANY);
+		meta.remove(root, EventSource.esPropertyGraphRevision, Node.ANY);
+		meta.remove(root, EventSource.esPropertyDefaultGraphRevision, Node.ANY);
+		meta.remove(root, EventSource.esPropertyRevision, Node.ANY);
+		meta.remove(root, EventSource.esPropertyGraph, Node.ANY);
+		meta.remove(root, EventSource.esPropertyAssertions, Node.ANY);
+		meta.remove(root, EventSource.esPropertyRetractions, Node.ANY);
+		meta.remove(root, EventSource.dctermsDate, Node.ANY);
+		
+		// Replace the temporary root node by the event URI
+		replaceNode(meta, root, resource);
+		
+		// Copy the data into the event log
+		GraphUtil.addInto(eventSource.getDefaultGraph(), meta);
+	}
+
+	private static Node getMetaDataRoot(Graph meta, Node resourceClass) {
 		Set<Triple> metaRoots = meta.find(Node.ANY, RDF.Nodes.type, resourceClass).toSet();
-		if (metaRoots.size() > 1) {
+
+		Node root = null;
+		if (metaRoots.size() == 1) {
+			root = metaRoots.iterator().next().getSubject();
+		} else {
 			throw new IllegalStateException(
 					"The supplied meta-data must have at most one resource of class "
 					+ resourceClass.getURI() + " but found " + metaRoots.size());
-		} else if (metaRoots.size() == 1) {
-			Node root = metaRoots.iterator().next().getSubject();
-			
-			// Restrict meta-data to describing the current event only
-			meta = (new GraphExtract(TripleBoundary.stopNowhere)).extract(root, meta);
-			
-			// Prevent the setting of predicates we set ourselves
-			meta.remove(root, RDF.Nodes.type, Node.ANY);
-			meta.remove(root, EventSource.esPropertyHead, Node.ANY);
-			meta.remove(root, EventSource.esPropertyPrevious, Node.ANY);
-			meta.remove(root, EventSource.esPropertyGraphRevision, Node.ANY);
-			meta.remove(root, EventSource.esPropertyDefaultGraphRevision, Node.ANY);
-			meta.remove(root, EventSource.esPropertyRevision, Node.ANY);
-			meta.remove(root, EventSource.esPropertyGraph, Node.ANY);
-			meta.remove(root, EventSource.esPropertyAssertions, Node.ANY);
-			meta.remove(root, EventSource.esPropertyRetractions, Node.ANY);
-			meta.remove(root, EventSource.dctermsDate, Node.ANY);
-			
-			// Replace the temporary root node by the event URI
-			replaceNode(meta, root, resource);
-			
-			// Copy the data into the event log
-			GraphUtil.addInto(eventSource.getDefaultGraph(), meta);
 		}
+		return root;
 	}
 
 	/**
@@ -365,8 +371,13 @@ public class EventSource {
 		Node date = NodeFactory.createLiteral(now(), XSDDatatype.XSDdateTime);
 		addTriple(d_datastore, version, dctermsDate, date);
 		addTriple(d_datastore, dataset, dctermsDate, date);
-		
+
 		addMetaData(d_datastore, meta, version, esClassDatasetVersion);
+		Node root = getMetaDataRoot(meta, esClassDatasetVersion);
+		Node creator = getUniqueOptionalObject(meta.find(root, dctermsCreator, Node.ANY));
+		if (creator != null) {
+			addTriple(d_datastore, dataset, dctermsCreator, creator);
+		}
 		
 		if (defaultGraphContent != null) {
 			Delta delta = new Delta(GraphFactory.createGraphMem());

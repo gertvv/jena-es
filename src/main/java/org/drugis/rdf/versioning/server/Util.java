@@ -102,7 +102,7 @@ public class Util {
 		
 		String description = request.getHeader("X-EventSource-Description");
 		if (description != null) {
-			title = decodeHeader(description);
+			description = decodeHeader(description);
 			graph.add(new Triple(root, EventSource.dctermsDescription, NodeFactory.createLiteral(description)));
 		}
 		
