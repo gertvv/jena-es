@@ -5,6 +5,7 @@ import java.io.IOException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.jena.riot.WebContent;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -24,7 +25,7 @@ import es.EventSource;
 public class UpdateController {
 	@Autowired EventSource d_eventSource;
 
-	@RequestMapping(method=RequestMethod.POST, consumes="application/sparql-update")
+	@RequestMapping(method=RequestMethod.POST, consumes=WebContent.contentTypeSPARQLUpdate)
 	public Object update(
 			@PathVariable String datasetId,
 			final HttpServletRequest request,
