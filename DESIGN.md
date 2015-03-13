@@ -11,7 +11,7 @@ This consists of two parts:
 Event sourced SPARQL Dataset
 ============================
 
-A SPARQL dataset is simply a collection of graphs, where each graph is a collection of statements (triples). In analogy to version control systems, think of the dataset as a repository and the graphs as files or documents. The event log itself is stored as RDF, where we track the statements added to and removed from each graph. eote that it does not make sense to check whether or not graphs were added or removed, since this is equivalent to them being (respectively) non-empty or empty.
+A SPARQL dataset is a collection of graphs, where each graph is a collection of statements (triples). In analogy to version control systems, think of the dataset as a repository and the graphs as files or documents. The event log itself is stored as RDF, where we track the statements added to and removed from each graph. Note that it does not make sense to check whether or not graphs were added or removed, since this is equivalent to them being (respectively) non-empty or empty.
 
 Each event source dataset is described by an event log, which is stored in its own graph:
 
@@ -81,7 +81,7 @@ Alternatively, this could be an insert of the graph in the other dataset with ap
 Write and transaction support is possible using proxy objects.
 Implementations of the standard Jena DatasetGraph and Graph interfaces that keep track of a set of changes on top of the current version enables fully transparent use of the Jena API, including SPARQL query and update.
 
-HTTP API - single dataset 
+HTTP API - single dataset
 =========================
 
 There are 2 + n endpoints:
@@ -97,7 +97,7 @@ There are 2 + n endpoints:
  - on each version:
    - SPARQL graph store API (read)
    - SPARQL query
-   - a default graph that describes meta-data, such the URI of the CURRENT endpoint 
+   - a default graph that describes meta-data, such the URI of the CURRENT endpoint
 
 These are the unresolved questions:
 
