@@ -1,4 +1,7 @@
 package es;
+import java.util.Observable;
+import java.util.Observer;
+
 import com.hp.hpl.jena.graph.Graph;
 import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.query.Dataset;
@@ -18,7 +21,7 @@ import com.hp.hpl.jena.update.GraphStore;
  */
 public class DatasetGraphEventSourcing extends DatasetGraphTrackActive implements GraphStore {
 	
-	private class Transaction {
+	private class Transaction extends Observable {
 		public DatasetGraph dsg;
 		public Graph meta;
 		
@@ -26,24 +29,33 @@ public class DatasetGraphEventSourcing extends DatasetGraphTrackActive implement
 			this.dsg = dsg;
 			this.meta = GraphFactory.createGraphMem();
 		}
+		
+		public void notifyVersion(Node version) {
+			setChanged();
+			notifyObservers(version);
+		}
 	}
 	
-	private DatasetGraph d_eventSource;
-	private Node d_logUri;
+	private EventSource d_eventSource;
+	private Node d_dataset;
 	private ThreadLocal<Transaction> d_txn;
 
-	public DatasetGraphEventSourcing(DatasetGraph eventSource, Node logUri) {
+	public DatasetGraphEventSourcing(EventSource eventSource, Node logUri) {
 		d_eventSource = eventSource;
-		if (!(eventSource instanceof Transactional)) {
+		if (!(eventSource.getDataStore() instanceof Transactional)) {
 			throw new IllegalArgumentException("DatasetGraphEventSourcing can only be based on a Transactional DatasetGraph");
 		}
-		d_logUri = logUri;
+		d_dataset = logUri;
 		d_txn = new ThreadLocal<Transaction>();
+	}
+	
+	public Node getLatestEvent() {
+		return d_eventSource.getLatestVersionUri(d_dataset);
 	}
 	
 	@Override
 	public Lock getLock() {
-		return d_eventSource.getLock(); // assuming it is SWMR
+		return d_eventSource.getDataStore().getLock(); // assuming it is SWMR
 	}
 
 	@Override
@@ -76,7 +88,6 @@ public class DatasetGraphEventSourcing extends DatasetGraphTrackActive implement
 		if (isInTransaction()) {
 			throw new JenaTransactionException("Already in a transaction");
 		}
-		
 	}
 
 	@Override
@@ -88,21 +99,26 @@ public class DatasetGraphEventSourcing extends DatasetGraphTrackActive implement
 		checkActive();
 		return d_txn.get().meta;
 	}
+	
+	public void addCommitListener(Observer o) {
+		checkWrite();
+		d_txn.get().addObserver(o);
+	}
 
 	@Override
 	protected void _begin(ReadWrite readWrite) {
 		if (readWrite == ReadWrite.READ) { // read-only: construct a view
 			getTransactional().begin(ReadWrite.READ);
-			d_txn.set(new Transaction(EventSource.replayLog(d_eventSource, d_logUri)));
+			d_txn.set(new Transaction(d_eventSource.getLatestVersion(d_dataset)));
 		} else { // read-write
 			getTransactional().begin(ReadWrite.WRITE);
-			d_txn.set(new Transaction(new DatasetGraphDelta(EventSource.replayLog(d_eventSource, d_logUri))));
+			d_txn.set(new Transaction(new DatasetGraphDelta(d_eventSource.getLatestVersion(d_dataset))));
 		}
 		
 	}
 
 	private Transactional getTransactional() {
-		return (Transactional)d_eventSource;
+		return (Transactional)d_eventSource.getDataStore();
 	}
 	
 	private void checkWrite() {
@@ -115,8 +131,9 @@ public class DatasetGraphEventSourcing extends DatasetGraphTrackActive implement
 	@Override
 	protected void _commit() {
 		checkWrite();
-		EventSource.writeToLog(d_eventSource, d_logUri, (DatasetGraphDelta) d_txn.get().dsg, d_txn.get().meta);
+		Node version = d_eventSource.writeToLog(d_dataset, (DatasetGraphDelta) d_txn.get().dsg, d_txn.get().meta);
 		getTransactional().commit();
+		d_txn.get().notifyVersion(version);
 		d_txn.remove();
 	}
 
@@ -137,7 +154,7 @@ public class DatasetGraphEventSourcing extends DatasetGraphTrackActive implement
 
 	@Override
 	protected void _close() {
-		d_eventSource.close();
+		d_eventSource.getDataStore().close();
 	}
 
 	@Override
@@ -150,7 +167,7 @@ public class DatasetGraphEventSourcing extends DatasetGraphTrackActive implement
 		// NI
 	}
 
-	public DatasetGraph getView(Node event) {
-		return EventSource.replayLogUntil(d_eventSource, d_logUri, event);
+	public DatasetGraph getView(Node version) {
+		return d_eventSource.getVersion(d_dataset, version);
 	}
 }

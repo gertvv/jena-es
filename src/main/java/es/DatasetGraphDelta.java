@@ -5,8 +5,8 @@ import java.util.Iterator;
 import java.util.Map;
 
 import com.hp.hpl.jena.graph.Graph;
+import com.hp.hpl.jena.graph.GraphUtil;
 import com.hp.hpl.jena.graph.Node;
-import com.hp.hpl.jena.graph.Triple;
 import com.hp.hpl.jena.graph.compose.Delta;
 import com.hp.hpl.jena.sparql.core.DatasetGraph;
 import com.hp.hpl.jena.sparql.core.DatasetGraphBase;
@@ -14,7 +14,6 @@ import com.hp.hpl.jena.sparql.core.DatasetGraphFactory;
 import com.hp.hpl.jena.sparql.core.GraphView;
 import com.hp.hpl.jena.sparql.core.Quad;
 import com.hp.hpl.jena.sparql.graph.GraphFactory;
-import com.hp.hpl.jena.util.iterator.ExtendedIterator;
 
 /**
  * A read-write Dataset that tracks changes.
@@ -46,7 +45,11 @@ public class DatasetGraphDelta extends DatasetGraphBase {
 				graph = GraphFactory.createGraphMem();
 			}
 			Delta delta = new Delta(graph);
-			d_next.addGraph(graphName, delta);
+			if (graphName.equals(Quad.defaultGraphNodeGenerated)) {
+				d_next.setDefaultGraph(delta);
+			} else {
+				d_next.addGraph(graphName, delta);
+			}
 			d_touched.put(graphName, delta);
 		}
 		return d_touched.get(graphName);
@@ -69,16 +72,14 @@ public class DatasetGraphDelta extends DatasetGraphBase {
 
 	@Override
 	public void setDefaultGraph(Graph g) {
-		throw new UnsupportedOperationException();
+		addGraph(Quad.defaultGraphNodeGenerated, g);
 	}
 	
 	@Override
 	public void addGraph(Node graphName, Graph graph) {
         Graph target = touchGraph(graphName);
         target.clear();
-		for (ExtendedIterator<Triple> it = graph.find(Node.ANY, Node.ANY, Node.ANY); it.hasNext(); ) {
-			target.add(it.next());
-		}
+        GraphUtil.addInto(target, graph);
 	}
 
 	@Override
