@@ -3,6 +3,8 @@ package org.drugis.rdf.versioning.server;
 import javax.servlet.http.HttpServletResponse;
 
 import org.drugis.rdf.versioning.server.messages.BooleanResult;
+import org.drugis.rdf.versioning.store.DatasetGraphEventSourcing;
+import org.drugis.rdf.versioning.store.EventSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -22,14 +24,11 @@ import com.hp.hpl.jena.query.ReadWrite;
 import com.hp.hpl.jena.query.ResultSet;
 import com.hp.hpl.jena.sparql.core.DatasetGraph;
 
-import es.DatasetGraphEventSourcing;
-import es.EventSource;
-
 @Controller
 @RequestMapping("/datasets/{datasetId}/query")
 public class QueryController {
 	@Autowired EventSource d_eventSource;
-
+	
 	@RequestMapping(method={RequestMethod.GET, RequestMethod.HEAD})
 	@ResponseBody
 	public Object query(

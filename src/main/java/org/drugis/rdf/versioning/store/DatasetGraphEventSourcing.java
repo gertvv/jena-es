@@ -1,4 +1,4 @@
-package es;
+package org.drugis.rdf.versioning.store;
 import java.util.Observable;
 import java.util.Observer;
 

@@ -6,6 +6,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.Collections;
 
+import org.drugis.rdf.versioning.store.DatasetGraphDelta;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -17,8 +18,6 @@ import com.hp.hpl.jena.sparql.core.DatasetGraph;
 import com.hp.hpl.jena.sparql.core.DatasetGraphFactory;
 import com.hp.hpl.jena.sparql.core.Quad;
 import com.hp.hpl.jena.sparql.graph.GraphFactory;
-
-import es.DatasetGraphDelta;
 
 
 @SuppressWarnings("deprecation")

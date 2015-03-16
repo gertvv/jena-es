@@ -6,6 +6,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.jena.riot.WebContent;
+import org.drugis.rdf.versioning.store.DatasetGraphEventSourcing;
+import org.drugis.rdf.versioning.store.EventSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -16,9 +18,6 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import com.hp.hpl.jena.query.Syntax;
 import com.hp.hpl.jena.sparql.modify.UsingList;
 import com.hp.hpl.jena.update.UpdateAction;
-
-import es.DatasetGraphEventSourcing;
-import es.EventSource;
 
 @Controller
 @RequestMapping("/datasets/{datasetId}/update")

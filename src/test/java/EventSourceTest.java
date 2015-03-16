@@ -6,6 +6,9 @@ import static org.junit.Assert.assertTrue;
 
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
+import org.drugis.rdf.versioning.store.DatasetGraphDelta;
+import org.drugis.rdf.versioning.store.DatasetGraphEventSourcing;
+import org.drugis.rdf.versioning.store.EventSource;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -17,10 +20,6 @@ import com.hp.hpl.jena.sparql.core.DatasetGraph;
 import com.hp.hpl.jena.sparql.core.DatasetGraphWithLock;
 import com.hp.hpl.jena.sparql.graph.GraphFactory;
 import com.hp.hpl.jena.vocabulary.RDF;
-
-import es.DatasetGraphDelta;
-import es.DatasetGraphEventSourcing;
-import es.EventSource;
 
 
 public class EventSourceTest {

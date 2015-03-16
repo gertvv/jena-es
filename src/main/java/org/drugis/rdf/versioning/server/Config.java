@@ -7,6 +7,7 @@ import java.util.List;
 import org.drugis.rdf.versioning.server.messages.BooleanResultMessageConverter;
 import org.drugis.rdf.versioning.server.messages.JenaGraphMessageConverter;
 import org.drugis.rdf.versioning.server.messages.JenaResultSetMessageConverter;
+import org.drugis.rdf.versioning.store.EventSource;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.web.WebMvcAutoConfiguration.WebMvcAutoConfigurationAdapter;
 import org.springframework.context.annotation.Bean;
@@ -18,8 +19,6 @@ import org.springframework.util.FileCopyUtils;
 import org.springframework.web.filter.CharacterEncodingFilter;
 
 import com.hp.hpl.jena.tdb.TDBFactory;
-
-import es.EventSource;
 
 @Configuration
 public class Config extends WebMvcAutoConfigurationAdapter {
