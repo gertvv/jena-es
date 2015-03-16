@@ -2,7 +2,10 @@ package org.drugis.rdf.versioning.server;
 
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.drugis.rdf.versioning.server.messages.BooleanResult;
+import org.drugis.rdf.versioning.server.messages.TransactionResultSet;
 import org.drugis.rdf.versioning.store.DatasetGraphEventSourcing;
 import org.drugis.rdf.versioning.store.EventSource;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,6 +32,8 @@ import com.hp.hpl.jena.sparql.core.DatasetGraph;
 public class QueryController {
 	@Autowired EventSource d_eventSource;
 	
+	Log d_log = LogFactory.getLog(getClass());
+	
 	@RequestMapping(method={RequestMethod.GET, RequestMethod.HEAD})
 	@ResponseBody
 	public Object query(
@@ -40,8 +45,13 @@ public class QueryController {
 
 		Query theQuery = QueryFactory.create(query, Config.BASE_URI);
 		DatasetGraph dsg = dataset;
+		
+		d_log.debug(query);
+
+		QueryExecution qExec;
 		try {
 			dataset.begin(ReadWrite.READ);
+			d_log.debug("Opened READ transaction");
 			if (version != null) {
 				dsg = dataset.getView(NodeFactory.createURI(version));
 			} else {
@@ -52,32 +62,47 @@ public class QueryController {
 			}
 			response.setHeader("X-EventSource-Version", version);
 			response.setHeader("Vary", "Accept, X-Accept-EventSource-Version");
-			QueryExecution qExec = QueryExecutionFactory.create(theQuery, DatasetFactory.create(dsg));
-			return executeQuery(qExec, theQuery);
-		} finally {
+			qExec = QueryExecutionFactory.create(theQuery, DatasetFactory.create(dsg));
+		} catch (VersionNotFoundException e) {
+			d_log.debug("Closing due to VersionNotFound");
 			dataset.end();
+			throw e;
+		} catch (Exception e) {
+			d_log.debug("Closing due to Exception prior to query: " + e);
+			dataset.end();
+			throw new RuntimeException(e);
 		}
+
+		return executeQuery(dataset, qExec, theQuery);
 	}
 
-	protected Object executeQuery(QueryExecution qExec, Query query) {
+	protected Object executeQuery(DatasetGraphEventSourcing dataset, QueryExecution qExec, Query query) {
 		if (query.isSelectType()) {
-			ResultSet rs = qExec.execSelect();
-			rs.hasNext();
-			return rs;
+			ResultSet rs =  null;
+			try {
+				rs = qExec.execSelect();
+				rs.hasNext();
+			} catch (Exception e) {
+				d_log.debug("Closing due to Exception in query: " + e);
+				dataset.end();
+				throw e;
+			}
+			return new TransactionResultSet(rs, dataset);
 		}
-
-		if (query.isConstructType()) {
-			return qExec.execConstruct().getGraph();
+		
+		Object result = null;
+		try {
+			if (query.isConstructType()) {
+				result = qExec.execConstruct().getGraph();
+			} else if (query.isDescribeType()) {
+				result = qExec.execDescribe().getGraph();
+			} else if (query.isAskType()) {
+				result = new BooleanResult(qExec.execAsk());
+			}
+		} finally {
+			d_log.debug("Closing after query (finally block)");
+			dataset.end();
 		}
-
-		if (query.isDescribeType()) {
-			return qExec.execDescribe().getGraph();
-		}
-
-		if (query.isAskType()) {
-			return new BooleanResult(qExec.execAsk());
-		}
-
-		return null;
+		return result;
 	}
 }
