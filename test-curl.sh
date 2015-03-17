@@ -5,7 +5,8 @@ set -e # exit on any error
 DATASETS="http://localhost:8080/datasets/"
 
 function checkResponse {
-  read str <  <(tr -d '\r')
+  # read first line (eliminate carriage returns and skip '100 Continue' blocks)
+  read str <  <(tr -d '\r' | sed -e '/HTTP\/1.1 100/,+1d')
   if [[ $str != "HTTP/1.1 $1"* ]]; then
     >&2 echo $str "did not match expected ($1)"
     exit 1
@@ -386,6 +387,43 @@ D3=$(extractLocation < 49-headers)
 D3_V0=$(extractVersion < 49-headers)
 
 curl $D3
+
+echo "== Testing with a larger dataset =="
+
+GRAPH=http://example.com/sp2b
+
+curl -s -D 50-headers -X POST $DATASET/data?graph=$GRAPH \
+  -H "Content-Type: text/turtle" \
+  --data-binary @sp2b.n3
+checkResponse 200 < 50-headers
+V9=$(extractVersion < 50-headers)
+
+curl -G -s -D 51-headers $DATASET/query \
+  -H "Accept: application/sparql-results+json" \
+  --data-urlencode "query=PREFIX foaf: <http://xmlns.com/foaf/0.1/> SELECT * WHERE { GRAPH <$GRAPH> { ?s a foaf:Person . ?s ?p ?o . } }" > 51-body
+checkResponse 200 < 51-headers
+
+echo "== Query with OPTIONAL (triggers delayed processing of ResultSet) =="
+
+curl -s -D 52-headers -X POST $DATASET/data?graph=http://example.com/study \
+  -H "Content-Type: text/turtle" \
+  --data " @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> . <http://example.com/study> rdfs:label \"Name\" ; rdfs:comment \"Title\" ."
+checkResponse 200 < 52-headers
+
+QUERYSTR="PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+SELECT ?obj ?label ?comment
+WHERE {
+  GRAPH ?obj {
+    ?obj rdfs:label ?label .
+    OPTIONAL { ?obj rdfs:comment ?comment . }
+  }
+}"
+
+curl -G -s -D 53-headers $DATASET/query \
+  -H "Accept: application/sparql-results+json" \
+  --data-urlencode "query=$QUERYSTR"
+checkResponse 200 < 53-headers
 
 exit 0
 
