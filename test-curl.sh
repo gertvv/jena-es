@@ -472,6 +472,48 @@ curl -G -s -D 60-headers $DATASET/query \
   --data-urlencode "query=PREFIX foaf: <http://xmlns.com/foaf/0.1/> SELECT * { GRAPH <$GRAPH> { ?x foaf:knows ?node . ?node foaf:name ?name } }"
 checkResponse 200 < 60-headers
 
+echo "== Via ?default-graph-uri and ?named-graph-uri =="
+
+curl -G -s -D 61-headers $DATASET/query \
+  -H "Content-Type: application/sparql-query" -H "Accept: text/plain" \
+  --data-urlencode "query=PREFIX foaf: <http://xmlns.com/foaf/0.1/> SELECT * { ?x foaf:knows ?node . ?node foaf:name ?name }" \
+  --data-urlencode "default-graph-uri=$GRAPH"
+checkResponse 200 < 61-headers
+
+curl -G -s -D 62-headers $DATASET/query \
+  -H "Content-Type: application/sparql-query" -H "Accept: text/plain" \
+  --data-urlencode "query=PREFIX foaf: <http://xmlns.com/foaf/0.1/> SELECT * { GRAPH <$GRAPH> { ?x foaf:knows ?node . ?node foaf:name ?name } }" \
+  --data-urlencode "named-graph-uri=http://example.com/nonGraph"
+checkResponse 200 < 62-headers
+
+curl -G -s -D 63-headers $DATASET/query \
+  -H "Content-Type: application/sparql-query" -H "Accept: text/plain" \
+  --data-urlencode "query=PREFIX foaf: <http://xmlns.com/foaf/0.1/> SELECT * { GRAPH <$GRAPH> { ?x foaf:knows ?node . ?node foaf:name ?name } }" \
+  --data-urlencode "named-graph-uri=$GRAPH"
+checkResponse 200 < 63-headers
+
+curl -s -D 64-headers -X PUT $DATA?graph=$GRAPH- \
+  -H "Content-Type: text/turtle" \
+  --data " @prefix foaf: <http://xmlns.com/foaf/0.1/> . <x> foaf:knows [ foaf:name \"Carol\" ] . [ foaf:name \"Eve\" ] foaf:knows <x> ."
+checkResponse 200 < 64-headers
+# V11
+
+curl -G -s -D 65-headers $DATASET/query \
+  -H "Content-Type: application/sparql-query" -H "Accept: text/plain" \
+  --data-urlencode "query=PREFIX foaf: <http://xmlns.com/foaf/0.1/> SELECT * { ?x foaf:knows ?node . ?node foaf:name ?name }" \
+  --data-urlencode "default-graph-uri=$GRAPH" \
+  --data-urlencode "default-graph-uri=$GRAPH-"
+checkResponse 200 < 65-headers
+
+curl -G -s -D 66-headers $DATASET/query \
+  -H "Content-Type: application/sparql-query" -H "Accept: text/plain" \
+  --data-urlencode "query=PREFIX foaf: <http://xmlns.com/foaf/0.1/> SELECT ?node ?name { GRAPH ?g { ?x foaf:knows ?node . ?node foaf:name ?name } }" \
+  --data-urlencode "named-graph-uri=$GRAPH" \
+  --data-urlencode "named-graph-uri=$GRAPH-"
+checkResponse 200 < 66-headers
+
+# TODO: update query with using list
+
 exit 0
 
 # Get latest version info
