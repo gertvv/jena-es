@@ -425,11 +425,38 @@ curl -G -s -D 53-headers $DATASET/query \
   --data-urlencode "query=$QUERYSTR"
 checkResponse 200 < 53-headers
 
+echo "== SPARQL Update default graph =="
+
+curl -s -D 54-headers -X POST $D2/update \
+  -H "Content-Type: application/sparql-update" \
+  --data "INSERT DATA { <a> <b> <c> }"
+checkResponse 200 < 54-headers
+
+curl -G -s -D 55-headers $D2/query \
+  -H "Content-Type: application/sparql-query" -H "Accept: text/plain" \
+  --data-urlencode "query=ASK { <a> <b> <c> . <d> <e> <f> . }" > 55-body
+checkResponse 200 < 55-headers
+checkEqual "yes" $(< 55-body)
+
+echo "== Graph store version conflict =="
+
+curl -s -D 56-headers -X PUT $DATA?default \
+  -H "Content-Type: text/turtle" -H "X-Accept-EventSource-Version: $D2_V0" \
+  --data "<g> <h> <i>" 
+checkResponse 409 < 56-headers
+
+echo "== Graph store invalid request =="
+
+curl -s -D 57-headers -X PUT $DATA?default \
+  -H "Content-Type: text/turtle" \
+  --data "<g> <h> ." 
+checkResponse 400 < 57-headers
+
+echo "== History =="
+
+curl $DATASET/history
+
 exit 0
-
-# TODO: update default graph through SPARQL
-
-# TODO: invalid graph store updates (e.g. wrong version)
 
 # Get latest version info
 
@@ -437,7 +464,6 @@ curl $DATASET
 
 # Get history
 
-curl $DATASET/history
 
 # Commit meta-data
 

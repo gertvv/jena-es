@@ -23,6 +23,7 @@ import com.hp.hpl.jena.query.Query;
 import com.hp.hpl.jena.query.QueryExecution;
 import com.hp.hpl.jena.query.QueryExecutionFactory;
 import com.hp.hpl.jena.query.QueryFactory;
+import com.hp.hpl.jena.query.QueryParseException;
 import com.hp.hpl.jena.query.ReadWrite;
 import com.hp.hpl.jena.query.ResultSet;
 import com.hp.hpl.jena.sparql.core.DatasetGraph;
@@ -43,7 +44,12 @@ public class QueryController {
 			HttpServletResponse response) {
 		final DatasetGraphEventSourcing dataset = Util.getDataset(d_eventSource, datasetId);
 
-		Query theQuery = QueryFactory.create(query, Config.BASE_URI);
+		Query theQuery = null;
+		try {
+			theQuery = QueryFactory.create(query, Config.BASE_URI);
+		} catch (QueryParseException e) {
+			throw new RequestParseException(e);
+		}
 		DatasetGraph dsg = dataset;
 		
 		d_log.debug(query);

@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 
+import com.hp.hpl.jena.query.QueryParseException;
 import com.hp.hpl.jena.query.Syntax;
 import com.hp.hpl.jena.sparql.modify.UsingList;
 import com.hp.hpl.jena.update.UpdateAction;
@@ -39,6 +40,8 @@ public class UpdateController {
 			public void run() {
 				try {
 					UpdateAction.parseExecute(usingList, dataset, request.getInputStream(), Config.BASE_URI, Syntax.syntaxARQ);
+				} catch (QueryParseException e) {
+					throw new RequestParseException(e);
 				} catch (IOException e) {
 					throw new RuntimeException(e);
 				}
