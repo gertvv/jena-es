@@ -386,7 +386,6 @@ public class EventSource {
 			} catch (InterruptedException e) {
 				throw new RuntimeException(e);
 			}
-			System.err.println(skolem);
 			replaceNode(graph, blank, skolem);
 		}
 		

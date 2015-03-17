@@ -454,7 +454,23 @@ checkResponse 400 < 57-headers
 
 echo "== History =="
 
-curl $DATASET/history
+curl $DATASET/history > 58-body
+echo `wc -l 58-body` "lines"
+
+echo "== Blank nodes =="
+
+GRAPH=http://example.com/blankNodes
+curl -s -D 59-headers -X PUT $DATA?graph=$GRAPH \
+  -H "Content-Type: text/turtle" \
+  --data " @prefix foaf: <http://xmlns.com/foaf/0.1/> . <x> foaf:knows [ foaf:name \"Alice\" ] , [ foaf:name \"Bob\" ] ."
+checkResponse 200 < 59-headers
+V10=$(extractVersion < 59-headers)
+echo $V10
+
+curl -G -s -D 60-headers $DATASET/query \
+  -H "Content-Type: application/sparql-query" -H "Accept: text/plain" \
+  --data-urlencode "query=PREFIX foaf: <http://xmlns.com/foaf/0.1/> SELECT * { GRAPH <$GRAPH> { ?x foaf:knows ?node . ?node foaf:name ?name } }"
+checkResponse 200 < 60-headers
 
 exit 0
 
