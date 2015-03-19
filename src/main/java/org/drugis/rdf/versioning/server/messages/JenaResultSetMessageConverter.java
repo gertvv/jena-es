@@ -70,10 +70,13 @@ public class JenaResultSetMessageConverter extends AbstractHttpMessageConverter<
 			}
 			throw new MediaTypeNotSupportedException();
 		}
-		ResultSetMgr.write(outputMessage.getBody(), rs, lang);
-		if (rs instanceof TransactionResultSet) {
-			d_log.debug("Closing transaction in MessageConverter");
-			((TransactionResultSet) rs).endTransaction();
+		try {
+			ResultSetMgr.write(outputMessage.getBody(), rs, lang);
+		} finally {
+			if (rs instanceof TransactionResultSet) {
+				d_log.debug("Closing transaction in MessageConverter");
+				((TransactionResultSet) rs).endTransaction();
+			}
 		}
 	}
 }

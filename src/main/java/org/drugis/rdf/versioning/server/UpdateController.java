@@ -14,7 +14,10 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 
+import com.hp.hpl.jena.graph.NodeFactory;
+import com.hp.hpl.jena.query.QueryParseException;
 import com.hp.hpl.jena.query.Syntax;
 import com.hp.hpl.jena.sparql.modify.UsingList;
 import com.hp.hpl.jena.update.UpdateAction;
@@ -28,17 +31,35 @@ public class UpdateController {
 	public Object update(
 			@PathVariable String datasetId,
 			final HttpServletRequest request,
+			@RequestParam(value="using-graph-uri", required=false) String[] usingGraphUri,
+			@RequestParam(value="using-named-graph-uri", required=false) String[] usingNamedGraphUri,
 			@RequestHeader(value="X-Accept-EventSource-Version", required=false) String version,
 			HttpServletResponse response)
 			throws Exception { // TODO: request parameters
 		final DatasetGraphEventSourcing dataset = Util.getDataset(d_eventSource, datasetId);
 		final UsingList usingList = new UsingList();
+		
+		// Can not specify default of {} for @RequestParam.
+		if (usingGraphUri == null) {
+			usingGraphUri = new String[0];
+		}
+		if (usingNamedGraphUri == null) {
+			usingNamedGraphUri = new String[0];
+		}
+		for (String uri : usingGraphUri) {
+			usingList.addUsing(NodeFactory.createURI(uri));
+		}
+		for (String uri : usingNamedGraphUri) {
+			usingList.addUsingNamed(NodeFactory.createURI(uri));
+		}
 
 		Runnable action = new Runnable() {
 			@Override
 			public void run() {
 				try {
 					UpdateAction.parseExecute(usingList, dataset, request.getInputStream(), Config.BASE_URI, Syntax.syntaxARQ);
+				} catch (QueryParseException e) {
+					throw new RequestParseException(e);
 				} catch (IOException e) {
 					throw new RuntimeException(e);
 				}

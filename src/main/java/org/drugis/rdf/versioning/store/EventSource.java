@@ -3,12 +3,15 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.UUID;
 
+import com.github.rholder.fauxflake.IdGenerators;
+import com.github.rholder.fauxflake.api.IdGenerator;
 import com.hp.hpl.jena.datatypes.xsd.XSDDatatype;
 import com.hp.hpl.jena.graph.Graph;
 import com.hp.hpl.jena.graph.GraphExtract;
@@ -26,6 +29,7 @@ import com.hp.hpl.jena.sparql.core.DatasetGraphFactory;
 import com.hp.hpl.jena.sparql.core.Quad;
 import com.hp.hpl.jena.sparql.core.Transactional;
 import com.hp.hpl.jena.sparql.graph.GraphFactory;
+import com.hp.hpl.jena.sparql.util.graph.GraphUtils;
 import com.hp.hpl.jena.vocabulary.RDF;
 
 @SuppressWarnings("deprecation")
@@ -56,12 +60,15 @@ public class EventSource {
 			super(message);
 		}
 	}
+	
+	private IdGenerator d_idgen = IdGenerators.newFlakeIdGenerator();
 
 	private DatasetGraph d_datastore;
 	private String VERSION;
 	private String REVISION;
 	private String ASSERT;
 	private String RETRACT;
+	private String SKOLEM;
 	private String d_uriPrefix;
 	
 	public EventSource(DatasetGraph datastore, String uriPrefix) {
@@ -72,6 +79,7 @@ public class EventSource {
 		REVISION = uriPrefix + "revisions/";
 		ASSERT = uriPrefix + "assert/";
 		RETRACT = uriPrefix + "retract/";
+		SKOLEM = uriPrefix + ".well-known/genid/";
 	}
 	
 	public DatasetGraph getDataStore() {
@@ -277,7 +285,7 @@ public class EventSource {
 		meta.remove(root, EventSource.dctermsDate, Node.ANY);
 		
 		// Replace the temporary root node by the event URI
-		replaceNode(meta, root, resource);
+		replaceSubject(meta, root, resource);
 		
 		// Copy the data into the event log
 		GraphUtil.addInto(eventSource.getDefaultGraph(), meta);
@@ -313,13 +321,26 @@ public class EventSource {
 		}
 		addTriple(eventSource, graphRevision, esPropertyRevision, revision);
 	}
-
+	
 	private static void replaceNode(Graph graph, Node oldNode, Node newNode) {
+		replaceSubject(graph, oldNode, newNode);
+		replaceObject(graph, oldNode, newNode);
+	}
+	
+	private static void replaceSubject(Graph graph, Node oldNode, Node newNode) {
 		for (Iterator<Triple> it = graph.find(oldNode, Node.ANY, Node.ANY); it.hasNext(); ) {
 			Triple triple = it.next();
 			graph.add(new Triple(newNode, triple.getPredicate(), triple.getObject()));
 		}
 		graph.remove(oldNode, Node.ANY, Node.ANY);
+	}
+
+	private static void replaceObject(Graph graph, Node oldNode, Node newNode) {
+		for (Iterator<Triple> it = graph.find(Node.ANY, Node.ANY, oldNode); it.hasNext(); ) {
+			Triple triple = it.next();
+			graph.add(new Triple(triple.getSubject(), triple.getPredicate(), newNode));
+		}
+		graph.remove(Node.ANY, Node.ANY, oldNode);
 	}
 
 	/**
@@ -338,7 +359,7 @@ public class EventSource {
 
 		if (!delta.getAdditions().isEmpty()) {
 			addTriple(d_datastore, revisionId, esPropertyAssertions, assertId);
-			d_datastore.addGraph(assertId, delta.getAdditions());
+			d_datastore.addGraph(assertId, skolemize(delta.getAdditions()));
 		}
 		if (!delta.getDeletions().isEmpty()) {
 			addTriple(d_datastore, revisionId, esPropertyRetractions, retractId);
@@ -346,6 +367,29 @@ public class EventSource {
 		}
 
 		return revisionId;
+	}
+
+	private Graph skolemize(Graph graph) {
+		Set<Node> blanks = new HashSet<Node>();
+		
+		for (Iterator<Node> nodes = GraphUtils.allNodes(graph); nodes.hasNext(); ) {
+			Node node = nodes.next();
+			if (node.isBlank()) {
+				blanks.add(node);
+			}
+		}
+		
+		for (Node blank : blanks) {
+			Node skolem;
+			try {
+				skolem = NodeFactory.createURI(SKOLEM + d_idgen.generateId(10).asString());
+			} catch (InterruptedException e) {
+				throw new RuntimeException(e);
+			}
+			replaceNode(graph, blank, skolem);
+		}
+		
+		return graph;
 	}
 
 	public Node createDatasetIfNotExists(Node dataset) {

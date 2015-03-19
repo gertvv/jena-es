@@ -1,5 +1,7 @@
 package org.drugis.rdf.versioning.server;
 
+import java.util.Arrays;
+
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.logging.Log;
@@ -23,9 +25,13 @@ import com.hp.hpl.jena.query.Query;
 import com.hp.hpl.jena.query.QueryExecution;
 import com.hp.hpl.jena.query.QueryExecutionFactory;
 import com.hp.hpl.jena.query.QueryFactory;
+import com.hp.hpl.jena.query.QueryParseException;
 import com.hp.hpl.jena.query.ReadWrite;
 import com.hp.hpl.jena.query.ResultSet;
+import com.hp.hpl.jena.sparql.core.DatasetDescription;
 import com.hp.hpl.jena.sparql.core.DatasetGraph;
+import com.hp.hpl.jena.sparql.core.DynamicDatasets;
+import com.hp.hpl.jena.sparql.core.Transactional;
 
 @Controller
 @RequestMapping("/datasets/{datasetId}/query")
@@ -39,11 +45,27 @@ public class QueryController {
 	public Object query(
 			@PathVariable String datasetId,
 			@RequestParam String query,
+			@RequestParam(value="default-graph-uri", required=false) String[] defaultGraphUri,
+			@RequestParam(value="named-graph-uri", required=false) String[] namedGraphUri,
 			@RequestHeader(value="X-Accept-EventSource-Version", required=false) String version,
 			HttpServletResponse response) {
+
+		// Can not specify default of {} for @RequestParam.
+		if (defaultGraphUri == null) {
+			defaultGraphUri = new String[0];
+		}
+		if (namedGraphUri == null) {
+			namedGraphUri = new String[0];
+		}
+		
 		final DatasetGraphEventSourcing dataset = Util.getDataset(d_eventSource, datasetId);
 
-		Query theQuery = QueryFactory.create(query, Config.BASE_URI);
+		Query theQuery = null;
+		try {
+			theQuery = QueryFactory.create(query, Config.BASE_URI);
+		} catch (QueryParseException e) {
+			throw new RequestParseException(e);
+		}
 		DatasetGraph dsg = dataset;
 		
 		d_log.debug(query);
@@ -52,6 +74,8 @@ public class QueryController {
 		try {
 			dataset.begin(ReadWrite.READ);
 			d_log.debug("Opened READ transaction");
+			
+			// Get the correct version
 			if (version != null) {
 				dsg = dataset.getView(NodeFactory.createURI(version));
 			} else {
@@ -60,6 +84,13 @@ public class QueryController {
 			if (dsg == null) {
 				throw new VersionNotFoundException();
 			}
+			
+			// Construct dataset supplied through request parameters
+			if (defaultGraphUri.length > 0 || namedGraphUri.length > 0) {
+				DatasetDescription description = new DatasetDescription(Arrays.asList(defaultGraphUri), Arrays.asList(namedGraphUri));
+				dsg = DynamicDatasets.dynamicDataset(description, dsg, false);
+			}
+		
 			response.setHeader("X-EventSource-Version", version);
 			response.setHeader("Vary", "Accept, X-Accept-EventSource-Version");
 			qExec = QueryExecutionFactory.create(theQuery, DatasetFactory.create(dsg));
@@ -76,7 +107,7 @@ public class QueryController {
 		return executeQuery(dataset, qExec, theQuery);
 	}
 
-	protected Object executeQuery(DatasetGraphEventSourcing dataset, QueryExecution qExec, Query query) {
+	protected Object executeQuery(Transactional transactional, QueryExecution qExec, Query query) {
 		if (query.isSelectType()) {
 			ResultSet rs =  null;
 			try {
@@ -84,10 +115,10 @@ public class QueryController {
 				rs.hasNext();
 			} catch (Exception e) {
 				d_log.debug("Closing due to Exception in query: " + e);
-				dataset.end();
+				transactional.end();
 				throw e;
 			}
-			return new TransactionResultSet(rs, dataset);
+			return new TransactionResultSet(rs, transactional);
 		}
 		
 		Object result = null;
@@ -101,7 +132,7 @@ public class QueryController {
 			}
 		} finally {
 			d_log.debug("Closing after query (finally block)");
-			dataset.end();
+			transactional.end();
 		}
 		return result;
 	}
