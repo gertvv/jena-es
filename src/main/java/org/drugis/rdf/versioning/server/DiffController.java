@@ -9,17 +9,21 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import com.hp.hpl.jena.graph.Graph;
+import com.hp.hpl.jena.graph.NodeFactory;
 
 @Controller
-@RequestMapping("/versions")
-public class VersionController {
+public class DiffController {
 	@Autowired EventSource eventSource;
-	@Autowired String versionInfoQuery;
 
-	@RequestMapping(value="/{id}", method=RequestMethod.GET)
+	@RequestMapping(value="/assert/{id}", method=RequestMethod.GET)
 	@ResponseBody
-	public Graph get(@PathVariable String id) {
-		String query = versionInfoQuery.replaceAll("\\$version", "<" + eventSource.getUriPrefix() + "versions/" + id + ">");
-		return Util.queryDataStore(eventSource, query);
+	public Graph getAssert(@PathVariable String id) {
+		return Util.getDataStoreGraph(eventSource, NodeFactory.createURI(eventSource.getUriPrefix() + "assert/" + id));
+	}
+
+	@RequestMapping(value="/retract/{id}", method=RequestMethod.GET)
+	@ResponseBody
+	public Graph getRetract(@PathVariable String id) {
+		return Util.getDataStoreGraph(eventSource, NodeFactory.createURI(Config.BASE_URI + "/retract/" + id));
 	}
 }

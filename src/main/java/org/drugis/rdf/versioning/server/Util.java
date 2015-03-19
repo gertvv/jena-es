@@ -7,6 +7,8 @@ import java.util.Observer;
 import javax.servlet.http.HttpServletRequest;
 
 import org.apache.commons.codec.binary.Base64;
+import org.drugis.rdf.versioning.store.DatasetGraphEventSourcing;
+import org.drugis.rdf.versioning.store.EventSource;
 
 import com.hp.hpl.jena.graph.Graph;
 import com.hp.hpl.jena.graph.GraphUtil;
@@ -25,12 +27,7 @@ import com.hp.hpl.jena.sparql.core.Transactional;
 import com.hp.hpl.jena.sparql.graph.GraphFactory;
 import com.hp.hpl.jena.vocabulary.RDF;
 
-import es.DatasetGraphEventSourcing;
-import es.EventSource;
-
 public class Util {
-	
-
 	/**
 	 * Run an action in a WRITE transaction and return the newly created version.
 	 * @param dataset Event sourcing dataset to run the action on.
@@ -77,6 +74,14 @@ public class Util {
 		} finally {
 			transactional.end();
 		}
+	}
+
+	public static Graph getDataStoreGraph(EventSource eventSource, Node uri) {
+		Transactional transactional = (Transactional)eventSource.getDataStore();
+		transactional.begin(ReadWrite.READ);
+		Graph graph = eventSource.getDataStore().getGraph(uri);
+		transactional.end();
+		return graph;
 	}
 
 	static String decodeHeader(String value) {

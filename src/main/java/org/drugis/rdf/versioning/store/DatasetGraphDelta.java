@@ -1,4 +1,4 @@
-package es;
+package org.drugis.rdf.versioning.store;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;

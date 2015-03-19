@@ -3,6 +3,7 @@ package util;
 import java.util.Iterator;
 
 import org.apache.jena.riot.RDFDataMgr;
+import org.drugis.rdf.versioning.store.EventSource;
 
 import arq.cmd.CmdException;
 import arq.cmdline.ArgDecl;
@@ -14,8 +15,6 @@ import com.hp.hpl.jena.query.ReadWrite;
 import com.hp.hpl.jena.sparql.core.DatasetGraph;
 import com.hp.hpl.jena.sparql.core.Transactional;
 import com.hp.hpl.jena.sparql.core.assembler.AssemblerUtils;
-
-import es.EventSource;
 
 public class InsertData extends CmdARQ {
     ArgDecl assemblerDescArg = new ArgDecl(ArgDecl.HasValue, "desc", "dataset") ;

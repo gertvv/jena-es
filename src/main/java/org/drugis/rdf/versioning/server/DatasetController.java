@@ -5,6 +5,7 @@ import java.util.UUID;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.drugis.rdf.versioning.store.EventSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -24,8 +25,6 @@ import com.hp.hpl.jena.query.ReadWrite;
 import com.hp.hpl.jena.sparql.core.Transactional;
 import com.hp.hpl.jena.util.iterator.ExtendedIterator;
 import com.hp.hpl.jena.vocabulary.RDF;
-
-import es.EventSource;
 
 @Controller
 @RequestMapping("/datasets")

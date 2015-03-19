@@ -5,7 +5,8 @@ set -e # exit on any error
 DATASETS="http://localhost:8080/datasets/"
 
 function checkResponse {
-  read str <  <(tr -d '\r')
+  # read first line (eliminate carriage returns and skip '100 Continue' blocks)
+  read str <  <(tr -d '\r' | sed -e '/HTTP\/1.1 100/,+1d')
   if [[ $str != "HTTP/1.1 $1"* ]]; then
     >&2 echo $str "did not match expected ($1)"
     exit 1
@@ -387,11 +388,133 @@ D3_V0=$(extractVersion < 49-headers)
 
 curl $D3
 
+echo "== Testing with a larger dataset =="
+
+GRAPH=http://example.com/sp2b
+
+curl -s -D 50-headers -X POST $DATASET/data?graph=$GRAPH \
+  -H "Content-Type: text/turtle" \
+  --data-binary @sp2b.n3
+checkResponse 200 < 50-headers
+V9=$(extractVersion < 50-headers)
+
+curl -G -s -D 51-headers $DATASET/query \
+  -H "Accept: application/sparql-results+json" \
+  --data-urlencode "query=PREFIX foaf: <http://xmlns.com/foaf/0.1/> SELECT * WHERE { GRAPH <$GRAPH> { ?s a foaf:Person . ?s ?p ?o . } }" > 51-body
+checkResponse 200 < 51-headers
+
+echo "== Query with OPTIONAL (triggers delayed processing of ResultSet) =="
+
+curl -s -D 52-headers -X POST $DATASET/data?graph=http://example.com/study \
+  -H "Content-Type: text/turtle" \
+  --data " @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> . <http://example.com/study> rdfs:label \"Name\" ; rdfs:comment \"Title\" ."
+checkResponse 200 < 52-headers
+
+QUERYSTR="PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+SELECT ?obj ?label ?comment
+WHERE {
+  GRAPH ?obj {
+    ?obj rdfs:label ?label .
+    OPTIONAL { ?obj rdfs:comment ?comment . }
+  }
+}"
+
+curl -G -s -D 53-headers $DATASET/query \
+  -H "Accept: application/sparql-results+json" \
+  --data-urlencode "query=$QUERYSTR"
+checkResponse 200 < 53-headers
+
+echo "== SPARQL Update default graph =="
+
+curl -s -D 54-headers -X POST $D2/update \
+  -H "Content-Type: application/sparql-update" \
+  --data "INSERT DATA { <a> <b> <c> }"
+checkResponse 200 < 54-headers
+
+curl -G -s -D 55-headers $D2/query \
+  -H "Content-Type: application/sparql-query" -H "Accept: text/plain" \
+  --data-urlencode "query=ASK { <a> <b> <c> . <d> <e> <f> . }" > 55-body
+checkResponse 200 < 55-headers
+checkEqual "yes" $(< 55-body)
+
+echo "== Graph store version conflict =="
+
+curl -s -D 56-headers -X PUT $DATA?default \
+  -H "Content-Type: text/turtle" -H "X-Accept-EventSource-Version: $D2_V0" \
+  --data "<g> <h> <i>" 
+checkResponse 409 < 56-headers
+
+echo "== Graph store invalid request =="
+
+curl -s -D 57-headers -X PUT $DATA?default \
+  -H "Content-Type: text/turtle" \
+  --data "<g> <h> ." 
+checkResponse 400 < 57-headers
+
+echo "== History =="
+
+curl $DATASET/history > 58-body
+echo `wc -l 58-body` "lines"
+
+echo "== Blank nodes =="
+
+GRAPH=http://example.com/blankNodes
+curl -s -D 59-headers -X PUT $DATA?graph=$GRAPH \
+  -H "Content-Type: text/turtle" \
+  --data " @prefix foaf: <http://xmlns.com/foaf/0.1/> . <x> foaf:knows [ foaf:name \"Alice\" ] , [ foaf:name \"Bob\" ] ."
+checkResponse 200 < 59-headers
+V10=$(extractVersion < 59-headers)
+echo $V10
+
+curl -G -s -D 60-headers $DATASET/query \
+  -H "Content-Type: application/sparql-query" -H "Accept: text/plain" \
+  --data-urlencode "query=PREFIX foaf: <http://xmlns.com/foaf/0.1/> SELECT * { GRAPH <$GRAPH> { ?x foaf:knows ?node . ?node foaf:name ?name } }"
+checkResponse 200 < 60-headers
+
+echo "== Via ?default-graph-uri and ?named-graph-uri =="
+
+curl -G -s -D 61-headers $DATASET/query \
+  -H "Content-Type: application/sparql-query" -H "Accept: text/plain" \
+  --data-urlencode "query=PREFIX foaf: <http://xmlns.com/foaf/0.1/> SELECT * { ?x foaf:knows ?node . ?node foaf:name ?name }" \
+  --data-urlencode "default-graph-uri=$GRAPH"
+checkResponse 200 < 61-headers
+
+curl -G -s -D 62-headers $DATASET/query \
+  -H "Content-Type: application/sparql-query" -H "Accept: text/plain" \
+  --data-urlencode "query=PREFIX foaf: <http://xmlns.com/foaf/0.1/> SELECT * { GRAPH <$GRAPH> { ?x foaf:knows ?node . ?node foaf:name ?name } }" \
+  --data-urlencode "named-graph-uri=http://example.com/nonGraph"
+checkResponse 200 < 62-headers
+
+curl -G -s -D 63-headers $DATASET/query \
+  -H "Content-Type: application/sparql-query" -H "Accept: text/plain" \
+  --data-urlencode "query=PREFIX foaf: <http://xmlns.com/foaf/0.1/> SELECT * { GRAPH <$GRAPH> { ?x foaf:knows ?node . ?node foaf:name ?name } }" \
+  --data-urlencode "named-graph-uri=$GRAPH"
+checkResponse 200 < 63-headers
+
+curl -s -D 64-headers -X PUT $DATA?graph=$GRAPH- \
+  -H "Content-Type: text/turtle" \
+  --data " @prefix foaf: <http://xmlns.com/foaf/0.1/> . <x> foaf:knows [ foaf:name \"Carol\" ] . [ foaf:name \"Eve\" ] foaf:knows <x> ."
+checkResponse 200 < 64-headers
+# V11
+
+curl -G -s -D 65-headers $DATASET/query \
+  -H "Content-Type: application/sparql-query" -H "Accept: text/plain" \
+  --data-urlencode "query=PREFIX foaf: <http://xmlns.com/foaf/0.1/> SELECT * { ?x foaf:knows ?node . ?node foaf:name ?name }" \
+  --data-urlencode "default-graph-uri=$GRAPH" \
+  --data-urlencode "default-graph-uri=$GRAPH-"
+checkResponse 200 < 65-headers
+
+curl -G -s -D 66-headers $DATASET/query \
+  -H "Content-Type: application/sparql-query" -H "Accept: text/plain" \
+  --data-urlencode "query=PREFIX foaf: <http://xmlns.com/foaf/0.1/> SELECT ?node ?name { GRAPH ?g { ?x foaf:knows ?node . ?node foaf:name ?name } }" \
+  --data-urlencode "named-graph-uri=$GRAPH" \
+  --data-urlencode "named-graph-uri=$GRAPH-"
+checkResponse 200 < 66-headers
+
+# TODO: update query with using list
+
 exit 0
-
-# TODO: update default graph through SPARQL
-
-# TODO: invalid graph store updates (e.g. wrong version)
 
 # Get latest version info
 
@@ -399,7 +522,6 @@ curl $DATASET
 
 # Get history
 
-curl $DATASET/history
 
 # Commit meta-data
 
