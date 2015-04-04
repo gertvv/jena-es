@@ -2,6 +2,9 @@ package org.drugis.rdf.versioning.store;
 import java.util.Observable;
 import java.util.Observer;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import com.hp.hpl.jena.graph.Graph;
 import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.query.Dataset;
@@ -20,6 +23,7 @@ import com.hp.hpl.jena.update.GraphStore;
  * Event sourcing dataset that supports transactions (single writer, multiple reader).
  */
 public class DatasetGraphEventSourcing extends DatasetGraphTrackActive implements GraphStore {
+	Log d_log = LogFactory.getLog(getClass());
 	
 	private class Transaction extends Observable {
 		public DatasetGraph dsg;
@@ -107,14 +111,24 @@ public class DatasetGraphEventSourcing extends DatasetGraphTrackActive implement
 
 	@Override
 	protected void _begin(ReadWrite readWrite) {
+		d_log.debug("TRANSACTION BEGIN for " + readWrite);
 		if (readWrite == ReadWrite.READ) { // read-only: construct a view
 			getTransactional().begin(ReadWrite.READ);
-			d_txn.set(new Transaction(d_eventSource.getLatestVersion(d_dataset)));
+			d_txn.set(new Transaction(getLatestVersionOrEndTransaction()));
 		} else { // read-write
 			getTransactional().begin(ReadWrite.WRITE);
-			d_txn.set(new Transaction(new DatasetGraphDelta(d_eventSource.getLatestVersion(d_dataset))));
+			d_txn.set(new Transaction(new DatasetGraphDelta(getLatestVersionOrEndTransaction())));
 		}
 		
+	}
+
+	private DatasetGraph getLatestVersionOrEndTransaction() {
+		try {
+			return d_eventSource.getLatestVersion(d_dataset);
+		} catch (RuntimeException e) {
+			getTransactional().end();
+			throw e;
+		}
 	}
 
 	private Transactional getTransactional() {
@@ -130,6 +144,7 @@ public class DatasetGraphEventSourcing extends DatasetGraphTrackActive implement
 
 	@Override
 	protected void _commit() {
+		d_log.debug("TRANSACTION COMMIT");
 		checkWrite();
 		Node version = d_eventSource.writeToLog(d_dataset, (DatasetGraphDelta) d_txn.get().dsg, d_txn.get().meta);
 		getTransactional().commit();
@@ -139,6 +154,7 @@ public class DatasetGraphEventSourcing extends DatasetGraphTrackActive implement
 
 	@Override
 	protected void _abort() {
+		d_log.debug("TRANSACTION ABORT");
 		checkWrite();
 		getTransactional().abort();
 		d_txn.remove();
@@ -146,9 +162,12 @@ public class DatasetGraphEventSourcing extends DatasetGraphTrackActive implement
 
 	@Override
 	protected void _end() {
+		d_log.debug("TRANSACTION END");
 		if (isInTransaction()) {
 			getTransactional().end();
 			d_txn.remove();
+		} else {
+			throw new RuntimeException("Trying to close non-existent transaction");
 		}
 	}
 

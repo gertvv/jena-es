@@ -1,5 +1,7 @@
 package org.drugis.rdf.versioning.server;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.drugis.rdf.versioning.store.EventSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -15,10 +17,12 @@ import com.hp.hpl.jena.graph.Graph;
 public class VersionController {
 	@Autowired EventSource eventSource;
 	@Autowired String versionInfoQuery;
+	Log d_log = LogFactory.getLog(getClass());
 
 	@RequestMapping(value="/{id}", method=RequestMethod.GET)
 	@ResponseBody
 	public Graph get(@PathVariable String id) {
+		d_log.debug("Version GET " + id);
 		String query = versionInfoQuery.replaceAll("\\$version", "<" + eventSource.getUriPrefix() + "versions/" + id + ">");
 		return Util.queryDataStore(eventSource, query);
 	}
