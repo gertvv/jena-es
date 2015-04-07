@@ -6,6 +6,8 @@ import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.drugis.rdf.versioning.store.DatasetGraphEventSourcing;
 import org.drugis.rdf.versioning.store.EventSource;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +33,7 @@ import com.hp.hpl.jena.sparql.graph.GraphFactory;
 @RequestMapping("/datasets/{datasetId}/data")
 public class GraphStoreController {
 	@Autowired EventSource d_eventSource;
+	Log d_log = LogFactory.getLog(getClass());
 
 	@RequestMapping(method={RequestMethod.GET, RequestMethod.HEAD})
 	@ResponseBody
@@ -41,23 +44,28 @@ public class GraphStoreController {
 			HttpServletResponse response) {
 		final DatasetGraphEventSourcing dataset = getDataset(datasetId);
 		TargetGraph target = determineTargetGraph(params);
+
+		d_log.debug("GraphStore GET " + datasetId + " " + target);
+
 		dataset.begin(ReadWrite.READ);
-		Graph rval;
-		if (version == null) {
-			rval = target.get(dataset);
-			version = dataset.getLatestEvent().getURI();
-		} else {
-			DatasetGraph view = dataset.getView(NodeFactory.createURI(version));
-			if (view == null) {
-				dataset.end();
-				throw new VersionNotFoundException();
+		try {
+			Graph rval;
+			if (version == null) {
+				rval = target.get(dataset);
+				version = dataset.getLatestEvent().getURI();
+			} else {
+				DatasetGraph view = dataset.getView(NodeFactory.createURI(version));
+				if (view == null) {
+					throw new VersionNotFoundException();
+				}
+				rval = target.get(view);
 			}
-			rval = target.get(view);
+			response.setHeader(ESHeaders.VERSION, version);
+			response.setHeader(HttpHeaders.VARY, HttpHeaders.ACCEPT + ", " + ESHeaders.ACCEPT_VERSION);
+			return rval;
+		} finally {
+			dataset.end();
 		}
-		dataset.end();
-		response.setHeader(ESHeaders.VERSION, version);
-		response.setHeader(HttpHeaders.VARY, HttpHeaders.ACCEPT + ", " + ESHeaders.ACCEPT_VERSION);
-		return rval;
 	}
 	
 	@RequestMapping(method=RequestMethod.PUT)
@@ -70,6 +78,9 @@ public class GraphStoreController {
 			HttpServletResponse response) {
 		final DatasetGraphEventSourcing dataset = getDataset(datasetId);
 		final TargetGraph target = determineTargetGraph(params);
+
+		d_log.debug("GraphStore PUT " + datasetId + " " + target);
+
 		Runnable action = new Runnable() {
 			@Override
 			public void run() {
@@ -90,6 +101,9 @@ public class GraphStoreController {
 			HttpServletResponse response) {
 		final DatasetGraphEventSourcing dataset = getDataset(datasetId);
 		final TargetGraph target = determineTargetGraph(params);
+
+		d_log.debug("GraphStore POST " + datasetId + " " + target);
+
 		Runnable action = new Runnable() {
 			@Override
 			public void run() {
@@ -109,6 +123,9 @@ public class GraphStoreController {
 			HttpServletResponse response) {
 		final DatasetGraphEventSourcing dataset = getDataset(datasetId);
 		final TargetGraph target = determineTargetGraph(params);
+
+		d_log.debug("GraphStore DELETE " + datasetId + " " + target);
+
 		Runnable action = new Runnable() {
 			@Override
 			public void run() {
@@ -168,6 +185,11 @@ public class GraphStoreController {
 		public void remove(DatasetGraphEventSourcing dataset) {
 			dataset.setDefaultGraph(GraphFactory.createGraphMem());
 		}
+		
+		@Override
+		public String toString() {
+			return "DefaultGraph()";
+		}
 	}
 	
 	static class NamedGraph extends TargetGraph {
@@ -195,6 +217,11 @@ public class GraphStoreController {
 		@Override
 		public void remove(DatasetGraphEventSourcing dataset) {
 			dataset.removeGraph(d_graphNode);
+		}
+		
+		@Override
+		public String toString() {
+			return "NamedGraph(" + getUri() + ")";
 		}
 	}
 	

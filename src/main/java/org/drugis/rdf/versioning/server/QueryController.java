@@ -49,6 +49,7 @@ public class QueryController {
 			@RequestParam(value="named-graph-uri", required=false) String[] namedGraphUri,
 			@RequestHeader(value="X-Accept-EventSource-Version", required=false) String version,
 			HttpServletResponse response) {
+		d_log.debug("Query " + datasetId);
 
 		// Can not specify default of {} for @RequestParam.
 		if (defaultGraphUri == null) {

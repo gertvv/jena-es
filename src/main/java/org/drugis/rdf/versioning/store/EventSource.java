@@ -91,7 +91,14 @@ public class EventSource {
 	}
 
 	public Node getLatestVersionUri(Node dataset) {
+		checkDatasetExists(dataset);
 		return getUniqueObject(d_datastore.getDefaultGraph().find(dataset, esPropertyHead, Node.ANY));
+	}
+
+	private void checkDatasetExists(Node dataset) {
+		if (!datasetExists(dataset)) {
+			throw new DatasetNotFoundException(dataset);
+		}
 	}
 	
 	private static Node getUniqueOptionalObject(Iterator<Triple> result) {
@@ -134,6 +141,7 @@ public class EventSource {
 	}
 
 	public DatasetGraph getVersion(Node dataset, Node version) {
+		checkDatasetExists(dataset);
 		if (!versionExists(dataset, version)) {
 			return null;
 		}
@@ -149,6 +157,10 @@ public class EventSource {
 			}
 		}
 		return ds;
+	}
+	
+	private boolean datasetExists(Node dataset) {
+		return d_datastore.getDefaultGraph().find(dataset, RDF.Nodes.type, esClassDataset).hasNext();
 	}
 	
 	private boolean versionExists(Node dataset, Node version) {
@@ -207,6 +219,7 @@ public class EventSource {
 	 * @return The ID of the event.
 	 */
 	public Node writeToLog(Node dataset, DatasetGraphDelta event) {
+		checkDatasetExists(dataset);
 		return writeToLog(dataset, event, GraphFactory.createGraphMem());
 	}
 	
