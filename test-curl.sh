@@ -512,6 +512,14 @@ curl -G -s -D 66-headers $DATASET/query \
   --data-urlencode "named-graph-uri=$GRAPH-"
 checkResponse 200 < 66-headers
 
+echo "=== Non-existent dataset should 404 ==="
+
+curl -G -s -D 67-headers $DATASETS/not-a-dataset/data?graph=http://example.com/ >/dev/null
+checkResponse 404 < 67-headers
+
+curl -G -s -D 67-headers $DATASET/data?graph=http://example.com/
+checkResponse 200 < 67-headers
+
 # TODO: update query with using list
 
 exit 0

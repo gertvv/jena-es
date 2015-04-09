@@ -5,6 +5,8 @@ import java.io.IOException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.jena.riot.WebContent;
 import org.drugis.rdf.versioning.store.DatasetGraphEventSourcing;
 import org.drugis.rdf.versioning.store.EventSource;
@@ -26,6 +28,7 @@ import com.hp.hpl.jena.update.UpdateAction;
 @RequestMapping("/datasets/{datasetId}/update")
 public class UpdateController {
 	@Autowired EventSource d_eventSource;
+	Log d_log = LogFactory.getLog(getClass());
 
 	@RequestMapping(method=RequestMethod.POST, consumes=WebContent.contentTypeSPARQLUpdate)
 	public Object update(
@@ -36,6 +39,8 @@ public class UpdateController {
 			@RequestHeader(value="X-Accept-EventSource-Version", required=false) String version,
 			HttpServletResponse response)
 			throws Exception { // TODO: request parameters
+		d_log.debug("Update " + datasetId);
+	
 		final DatasetGraphEventSourcing dataset = Util.getDataset(d_eventSource, datasetId);
 		final UsingList usingList = new UsingList();
 		

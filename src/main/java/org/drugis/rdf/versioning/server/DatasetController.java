@@ -5,6 +5,8 @@ import java.util.UUID;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.drugis.rdf.versioning.store.EventSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
@@ -32,10 +34,13 @@ public class DatasetController {
 	@Autowired EventSource eventSource;
 	@Autowired String datasetInfoQuery;
 	@Autowired String datasetHistoryQuery;
+	Log d_log = LogFactory.getLog(getClass());
 
 	@RequestMapping(value="", method=RequestMethod.GET, produces="text/html")
 	@ResponseBody
 	public String list() {
+		d_log.debug("Dataset LIST");
+
 		StringBuilder builder = new StringBuilder();
 		builder.append("<html><body><ul>");
 		Transactional transactional = (Transactional)eventSource.getDataStore();
@@ -60,6 +65,8 @@ public class DatasetController {
 	@RequestMapping(value="", method=RequestMethod.POST)
 	@ResponseStatus(HttpStatus.CREATED)
 	public void create(HttpServletRequest request, HttpServletResponse response, @RequestBody(required=false) Graph graph) {
+		d_log.debug("Dataset CREATE");
+
 		String id = UUID.randomUUID().toString();
 		Graph meta = Util.versionMetaData(request);
 		Node dataset = NodeFactory.createURI(eventSource.getUriPrefix() + "datasets/" + id);
@@ -71,6 +78,8 @@ public class DatasetController {
 	@RequestMapping(value="/{id}", method=RequestMethod.GET)
 	@ResponseBody
 	public Graph get(@PathVariable String id) {
+		d_log.debug("Dataset GET " + id);
+
 		String query = datasetInfoQuery.replaceAll("\\$dataset", "<" + eventSource.getUriPrefix() + "datasets/" + id + ">");
 		return Util.queryDataStore(eventSource, query);
 	}
@@ -78,6 +87,8 @@ public class DatasetController {
 	@RequestMapping(value="/{id}/history", method=RequestMethod.GET)
 	@ResponseBody
 	public Graph history(@PathVariable String id) {
+		d_log.debug("Dataset GET " + id + "/history");
+
 		String query = datasetHistoryQuery.replaceAll("\\$dataset", "<" + eventSource.getUriPrefix() + "datasets/" + id + ">");
 		return Util.queryDataStore(eventSource, query);
 	}
