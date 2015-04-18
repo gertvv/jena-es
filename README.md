@@ -9,7 +9,7 @@ Running
 Set the URI prefix for the store, e.g.:
 
 ```
-export EVENT_SOURCE_URI_PREFIX=http://localhost:8080/
+export EVENT_SOURCE_URI_PREFIX=http://localhost:8080
 ```
 
 The run the application directly through Maven:

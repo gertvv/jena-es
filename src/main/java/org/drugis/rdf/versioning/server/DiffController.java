@@ -22,13 +22,13 @@ public class DiffController {
 	@ResponseBody
 	public Graph getAssert(@PathVariable String id) {
 		d_log.debug("Diff GET assert/" + id);
-		return Util.getDataStoreGraph(eventSource, NodeFactory.createURI(eventSource.getUriPrefix() + "assert/" + id));
+		return Util.getDataStoreGraph(eventSource, NodeFactory.createURI(eventSource.getAssertionsUri(id)));
 	}
 
 	@RequestMapping(value="/retract/{id}", method=RequestMethod.GET)
 	@ResponseBody
 	public Graph getRetract(@PathVariable String id) {
 		d_log.debug("Diff GET retract/" + id);
-		return Util.getDataStoreGraph(eventSource, NodeFactory.createURI(Config.BASE_URI + "/retract/" + id));
+		return Util.getDataStoreGraph(eventSource, NodeFactory.createURI(eventSource.getRetractionsUri(id)));
 	}
 }

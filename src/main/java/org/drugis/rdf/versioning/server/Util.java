@@ -59,7 +59,7 @@ public class Util {
 	}
 
 	public static DatasetGraphEventSourcing getDataset(EventSource eventSource, String datasetId) {
-		return new DatasetGraphEventSourcing(eventSource, NodeFactory.createURI(eventSource.getUriPrefix() + "datasets/" + datasetId));
+		return new DatasetGraphEventSourcing(eventSource, NodeFactory.createURI(eventSource.getDatasetUri(datasetId)));
 	}
 
 	public static Graph queryDataStore(EventSource eventSource, String query) {

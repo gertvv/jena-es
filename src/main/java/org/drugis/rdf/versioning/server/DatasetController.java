@@ -69,7 +69,7 @@ public class DatasetController {
 
 		String id = UUID.randomUUID().toString();
 		Graph meta = Util.versionMetaData(request);
-		Node dataset = NodeFactory.createURI(eventSource.getUriPrefix() + "datasets/" + id);
+		Node dataset = NodeFactory.createURI(eventSource.getDatasetUri(id));
 		Node version = eventSource.createDataset(dataset, graph, meta);
 		response.setHeader(HttpHeaders.LOCATION, dataset.getURI());
 		response.setHeader(ESHeaders.VERSION, version.getURI());
@@ -80,7 +80,7 @@ public class DatasetController {
 	public Graph get(@PathVariable String id) {
 		d_log.debug("Dataset GET " + id);
 
-		String query = datasetInfoQuery.replaceAll("\\$dataset", "<" + eventSource.getUriPrefix() + "datasets/" + id + ">");
+		String query = datasetInfoQuery.replaceAll("\\$dataset", "<" + eventSource.getDatasetUri(id) + ">");
 		return Util.queryDataStore(eventSource, query);
 	}
 
@@ -89,7 +89,7 @@ public class DatasetController {
 	public Graph history(@PathVariable String id) {
 		d_log.debug("Dataset GET " + id + "/history");
 
-		String query = datasetHistoryQuery.replaceAll("\\$dataset", "<" + eventSource.getUriPrefix() + "datasets/" + id + ">");
+		String query = datasetHistoryQuery.replaceAll("\\$dataset", "<" + eventSource.getDatasetUri(id) + ">");
 		return Util.queryDataStore(eventSource, query);
 	}
 }

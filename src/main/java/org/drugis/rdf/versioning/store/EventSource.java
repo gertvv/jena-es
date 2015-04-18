@@ -75,11 +75,11 @@ public class EventSource {
 		d_datastore = datastore;
 		d_uriPrefix = uriPrefix;
 		
-		VERSION = uriPrefix + "versions/";
-		REVISION = uriPrefix + "revisions/";
-		ASSERT = uriPrefix + "assert/";
-		RETRACT = uriPrefix + "retract/";
-		SKOLEM = uriPrefix + ".well-known/genid/";
+		VERSION = uriPrefix + "/versions/";
+		REVISION = uriPrefix + "/revisions/";
+		ASSERT = uriPrefix + "/assert/";
+		RETRACT = uriPrefix + "/retract/";
+		SKOLEM = uriPrefix + "/.well-known/genid/";
 	}
 	
 	public DatasetGraph getDataStore() {
@@ -448,5 +448,21 @@ public class EventSource {
 		
 		trans.commit();
 		return version;
+	}
+
+	public String getDatasetUri(String id) {
+		return getUriPrefix() + "/datasets/" + id;
+	}
+
+	public String getRetractionsUri(String id) {
+		return RETRACT + id;
+	}
+
+	public String getAssertionsUri(String id) {
+		return ASSERT + id;
+	}
+
+	public String getVersionUri(String id) {
+		return VERSION + id;
 	}
 }

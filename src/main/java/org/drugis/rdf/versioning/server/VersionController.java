@@ -23,7 +23,7 @@ public class VersionController {
 	@ResponseBody
 	public Graph get(@PathVariable String id) {
 		d_log.debug("Version GET " + id);
-		String query = versionInfoQuery.replaceAll("\\$version", "<" + eventSource.getUriPrefix() + "versions/" + id + ">");
+		String query = versionInfoQuery.replaceAll("\\$version", "<" + eventSource.getVersionUri(id) + ">");
 		return Util.queryDataStore(eventSource, query);
 	}
 }
