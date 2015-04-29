@@ -1,6 +1,6 @@
 package org.drugis.rdf.versioning.server;
 
-import java.util.UUID;
+import java.util.*;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -61,7 +61,26 @@ public class DatasetController {
 		}
 		return builder.toString();
 	}
-	
+
+    @RequestMapping(value="", method=RequestMethod.GET, produces="application/json")
+    @ResponseBody
+    public List<String> listAsJson() {
+        d_log.debug("Dataset LIST");
+        List<String> jsonResponse = new ArrayList<>();
+        Transactional transactional = (Transactional)eventSource.getDataStore();
+        transactional.begin(ReadWrite.READ);
+        try {
+            ExtendedIterator<Triple> find = eventSource.getDataStore().getDefaultGraph().find(Node.ANY, RDF.Nodes.type, EventSource.esClassDataset);
+            while (find.hasNext()) {
+                Triple triple = find.next();
+                jsonResponse.add(triple.getSubject().getURI());
+            }
+        } finally {
+            transactional.end();
+        }
+        return jsonResponse;
+    }
+
 	@RequestMapping(value="", method=RequestMethod.POST)
 	@ResponseStatus(HttpStatus.CREATED)
 	public void create(HttpServletRequest request, HttpServletResponse response, @RequestBody(required=false) Graph graph) {
