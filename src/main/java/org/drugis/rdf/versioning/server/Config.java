@@ -5,6 +5,7 @@ import java.io.InputStreamReader;
 import java.util.List;
 
 import org.drugis.rdf.versioning.server.messages.BooleanResultMessageConverter;
+import org.drugis.rdf.versioning.server.messages.JenaDatasetMessageConverter;
 import org.drugis.rdf.versioning.server.messages.JenaGraphMessageConverter;
 import org.drugis.rdf.versioning.server.messages.JenaResultSetMessageConverter;
 import org.drugis.rdf.versioning.store.EventSource;
@@ -59,6 +60,7 @@ public class Config extends WebMvcAutoConfigurationAdapter {
     @Override
     public void configureMessageConverters(List<HttpMessageConverter<?>> converters) {
         converters.add(new JenaGraphMessageConverter());
+        converters.add(new JenaDatasetMessageConverter());
         converters.add(new JenaResultSetMessageConverter());
         converters.add(new BooleanResultMessageConverter());
         super.configureMessageConverters(converters);

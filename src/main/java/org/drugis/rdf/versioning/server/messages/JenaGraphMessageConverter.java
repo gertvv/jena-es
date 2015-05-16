@@ -75,12 +75,12 @@ public class JenaGraphMessageConverter extends AbstractHttpMessageConverter<Grap
 		RDFDataMgr.write(outputMessage.getBody(), graph, fmt);
 	}
 
-	private RDFFormat determineRDFFormat(HttpHeaders headers) {
+	static RDFFormat determineRDFFormat(HttpHeaders headers) {
 		Lang lang = determineRDFLang(headers);
 		return (lang == Lang.RDFXML) ? RDFFormat.RDFXML_PLAIN : RDFWriterRegistry.defaultSerialization(lang);
 	}
 
-	private Lang determineRDFLang(HttpHeaders headers) {
+	static Lang determineRDFLang(HttpHeaders headers) {
 		MediaType mediaType = headers.getContentType();
 		mediaType = new MediaType(mediaType.getType(), mediaType.getSubtype()); // strip all information not understood by RDFLanguages
 		return RDFLanguages.contentTypeToLang(mediaType.toString());

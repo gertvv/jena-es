@@ -123,7 +123,7 @@ public class DatasetGraphDelta extends DatasetGraphBase {
 
 	@Override
 	public void clear() {
-		throw new UnsupportedOperationException();
+		d_next.clear();
 	}
 
 	@Override
