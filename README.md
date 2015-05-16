@@ -18,4 +18,4 @@ The run the application directly through Maven:
 mvn spring-boot:run
 ```
 
-Or package it (`mvn package`) and then run it using `java -jar`.
+Or package it (`mvn install spring-boot:repackage`) and then run it using `java -jar`.
