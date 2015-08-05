@@ -57,6 +57,10 @@ public class DatasetGraphEventSourcing extends DatasetGraphTrackActive implement
 		return d_eventSource.getLatestVersionUri(d_dataset);
 	}
 	
+	public boolean exists() {
+		return d_eventSource.datasetExists(d_dataset);
+	}
+	
 	@Override
 	public Lock getLock() {
 		return d_eventSource.getDataStore().getLock(); // assuming it is SWMR
@@ -188,5 +192,9 @@ public class DatasetGraphEventSourcing extends DatasetGraphTrackActive implement
 
 	public DatasetGraph getView(Node version) {
 		return d_eventSource.getVersion(d_dataset, version);
+	}
+
+	public Node getDatasetUri() {
+		return d_dataset;
 	}
 }

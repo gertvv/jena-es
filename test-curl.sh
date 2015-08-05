@@ -2,7 +2,7 @@
 
 set -e # exit on any error
 
-DATASETS="http://localhost:8080/datasets/"
+DATASETS="http://localhost:8080/datasets"
 
 function checkResponse {
   # read first line (eliminate carriage returns and skip '100 Continue' blocks)
@@ -517,8 +517,12 @@ echo "=== Non-existent dataset should 404 ==="
 curl -G -s -D 67-headers $DATASETS/not-a-dataset/data?graph=http://example.com/ >/dev/null
 checkResponse 404 < 67-headers
 
-curl -G -s -D 67-headers $DATASET/data?graph=http://example.com/
-checkResponse 200 < 67-headers
+curl -G -s -D 68-headers $DATASET/data?graph=http://example.com/
+checkResponse 200 < 68-headers
+
+curl -G -s -D 69-headers $DATASETS/not-a-dataset/query \
+  --data-urlencode "query=SELECT * WHERE { GRAPH <$GRAPH> { ?s ?p ?o } }"
+checkResponse 404 < 69-headers
 
 # TODO: update query with using list
 

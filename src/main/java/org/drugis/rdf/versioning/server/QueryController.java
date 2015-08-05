@@ -9,6 +9,7 @@ import org.apache.commons.logging.LogFactory;
 import org.drugis.rdf.versioning.server.messages.BooleanResult;
 import org.drugis.rdf.versioning.server.messages.TransactionResultSet;
 import org.drugis.rdf.versioning.store.DatasetGraphEventSourcing;
+import org.drugis.rdf.versioning.store.DatasetNotFoundException;
 import org.drugis.rdf.versioning.store.EventSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -74,6 +75,9 @@ public class QueryController {
 		QueryExecution qExec;
 		try {
 			dataset.begin(ReadWrite.READ);
+			if (!dataset.isInTransaction()) {
+				throw new DatasetNotFoundException(dataset.getDatasetUri());
+			}
 			d_log.debug("Opened READ transaction");
 			
 			// Get the correct version
@@ -98,6 +102,9 @@ public class QueryController {
 		} catch (VersionNotFoundException e) {
 			d_log.debug("Closing due to VersionNotFound");
 			dataset.end();
+			throw e;
+		} catch (DatasetNotFoundException e) {
+			// transaction already closed
 			throw e;
 		} catch (Exception e) {
 			d_log.debug("Closing due to Exception prior to query: " + e);
