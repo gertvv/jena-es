@@ -30,6 +30,7 @@ import com.hp.hpl.jena.sparql.core.Quad;
 import com.hp.hpl.jena.sparql.core.Transactional;
 import com.hp.hpl.jena.sparql.graph.GraphFactory;
 import com.hp.hpl.jena.sparql.util.graph.GraphUtils;
+import com.hp.hpl.jena.util.iterator.Filter;
 import com.hp.hpl.jena.vocabulary.RDF;
 
 @SuppressWarnings("deprecation")
@@ -39,6 +40,9 @@ public class EventSource {
 	public static final Node esClassDataset = NodeFactory.createURI(ES + "Dataset"),
 			esClassDatasetVersion = NodeFactory.createURI(ES + "DatasetVersion"),
 			esClassRevision = NodeFactory.createURI(ES + "Revision"),
+			esClassMergeTypeCopyTheirs = NodeFactory.createURI(ES + "MergeTypeCopyTheirs"),
+			esClassNamedGraphRevision = NodeFactory.createURI(ES + "NamedGraphRevision"),
+			esClassDefaultGraphRevision = NodeFactory.createURI(ES + "DefaultGraphRevision"),
 			esPropertyHead = NodeFactory.createURI(ES + "head"),
 			esPropertyDataset = NodeFactory.createURI(ES + "dataset"),
 			esPropertyDefaultGraphRevision = NodeFactory.createURI(ES + "default_graph_revision"),
@@ -48,6 +52,8 @@ public class EventSource {
 			esPropertyPrevious = NodeFactory.createURI(ES + "previous"),
 			esPropertyAssertions = NodeFactory.createURI(ES + "assertions"),
 			esPropertyRetractions = NodeFactory.createURI(ES + "retractions"),
+			esPropertyMergedRevision = NodeFactory.createURI(ES + "merged_revision"),
+			esPropertyMergeType = NodeFactory.createURI(ES + "merge_type"),
 			dctermsDate = NodeFactory.createURI(DCTERMS + "date"),
 			dctermsCreator = NodeFactory.createURI(DCTERMS + "creator"),
 			dctermsTitle = NodeFactory.createURI(DCTERMS + "title"),
@@ -60,7 +66,7 @@ public class EventSource {
 			super(message);
 		}
 	}
-	
+
 	private IdGenerator d_idgen = IdGenerators.newFlakeIdGenerator();
 
 	private DatasetGraph d_datastore;
@@ -119,6 +125,17 @@ public class EventSource {
 		}
 		return object;
 	}
+
+	private static Node getUniqueOptionalSubject(Iterator<Triple> result) {
+		if (result.hasNext()) {
+			Node subject = result.next().getSubject();
+			if (result.hasNext()) {
+				throw new IllegalStateException("Multiple subjects on property of arity 1");
+			}
+			return subject;
+		}
+		return null;
+	}
 	
 	private static Map<Node, Node> getGraphRevisions(DatasetGraph eventSource, Node version) {
 		Map<Node, Node> map = new HashMap<Node, Node>();
@@ -173,12 +190,19 @@ public class EventSource {
 		}
 		return true;
 	}
+	
+	private boolean revisionExists(Node revision) {
+		return d_datastore.getDefaultGraph().find(revision, RDF.Nodes.type, esClassRevision).hasNext();
+	}
 
 	public DatasetGraph getLatestVersion(Node dataset) {
 		return getVersion(dataset, getLatestVersionUri(dataset));
 	}
 
 	public Graph getRevision(Node revision) {
+		if (!revisionExists(revision)) {
+			return null;
+		}
 		Node previous = getUniqueOptionalObject(d_datastore.getDefaultGraph().find(revision, esPropertyPrevious, Node.ANY));
 		Graph graph = GraphFactory.createGraphMem();
 		if (previous != null) {
@@ -235,7 +259,7 @@ public class EventSource {
 	 * @param d_datastore The DatasetGraph containing the event log.
 	 * @param log The URI of the event log.
 	 * @param event The event (changeset).
-	 * @param meta A graph containing meta-data. It must contain a single blank node of class es:Event, the properties of which will be added to the event meta-data.
+	 * @param meta A graph containing meta-data. It must contain a single blank node of class es:DatasetVersion, the properties of which will be added to the event meta-data.
 	 * @return The ID of the event.
 	 */
 	public Node writeToLog(Node dataset, DatasetGraphDelta event, Graph meta) {
@@ -250,9 +274,9 @@ public class EventSource {
 
 		Map<Node, Node> previousRevisions = getGraphRevisions(d_datastore, previous);
 		for (Iterator<Node> graphs = event.listGraphNodes(); graphs.hasNext(); ) {
-			writeGraphRevision(event, version, previousRevisions, graphs.next());
+			writeGraphRevision(event, version, previousRevisions, graphs.next(), meta);
 		}
-		writeGraphRevision(event, version, previousRevisions, Quad.defaultGraphNodeGenerated);
+		writeGraphRevision(event, version, previousRevisions, Quad.defaultGraphNodeGenerated, meta);
 		
 		addTriple(d_datastore, version, esPropertyPrevious, previous);
 		d_datastore.getDefaultGraph().remove(dataset, esPropertyHead, previous);
@@ -261,7 +285,7 @@ public class EventSource {
 		return version;
 	}
 
-	private void writeGraphRevision(DatasetGraphDelta event, Node version, Map<Node, Node> previousRevisions, Node graph) {
+	private void writeGraphRevision(DatasetGraphDelta event, Node version, Map<Node, Node> previousRevisions, final Node graph, final Graph meta) {
 		if (event.getGraph(graph).isEmpty()) {
 			return;
 		}
@@ -269,36 +293,59 @@ public class EventSource {
 		if (!event.getModifications().containsKey(graph)) {
 			addGraphRevision(d_datastore, version, graph, previousRevisions.get(graph));
 		} else {
-			addGraphRevision(d_datastore, version, graph, writeRevision(event.getModifications().get(graph), previousRevisions.get(graph)));
+			Node newRevision = writeRevision(event.getModifications().get(graph), previousRevisions.get(graph));
+			addRevisionMetaData(graph, meta, newRevision);
+			addGraphRevision(d_datastore, version, graph, newRevision);
 		}
 	}
 
-	/**
-	 * Add meta-data to a resource. Filters the given meta-data graph.
-	 */
+	private void addRevisionMetaData(final Node graph, final Graph meta,
+			Node newRevision) {
+		Node graphRevision = null;
+		if (graph.equals(Quad.defaultGraphNodeGenerated)) {
+			graphRevision = getUniqueOptionalSubject(meta.find(Node.ANY, RDF.Nodes.type, EventSource.esClassDefaultGraphRevision));
+		} else {
+			graphRevision = getUniqueOptionalSubject(meta.find(Node.ANY, RDF.Nodes.type, EventSource.esClassNamedGraphRevision).filterKeep(new Filter<Triple>() {
+				@Override public boolean accept(Triple o) {
+					return meta.find(o.getSubject(), EventSource.esPropertyGraph, graph).hasNext();
+				}}));
+		}
+		if (graphRevision != null) {
+			Node revisionMetaRoot = getUniqueObject(meta.find(graphRevision, esPropertyRevision, Node.ANY));
+			addMetaData(d_datastore, newRevision, meta, revisionMetaRoot);
+		}
+	}
+
 	private static void addMetaData(DatasetGraph eventSource, Graph meta, Node resource, Node resourceClass) {
 		Node root = getMetaDataRoot(meta, resourceClass);
 		if (root == null) {
 			return;
 		}
 		
+		addMetaData(eventSource, resource, meta, root);
+	}
+
+	/**
+	 * Add meta-data to a resource. Filters the given meta-data graph.
+	 */
+	private static void addMetaData(DatasetGraph eventSource, Node resource, Graph meta, Node metaDataRoot) {
 		// Restrict meta-data to describing the current event only
-		meta = (new GraphExtract(TripleBoundary.stopNowhere)).extract(root, meta);
+		meta = (new GraphExtract(TripleBoundary.stopNowhere)).extract(metaDataRoot, meta);
 		
 		// Prevent the setting of predicates we set ourselves
-		meta.remove(root, RDF.Nodes.type, Node.ANY);
-		meta.remove(root, EventSource.esPropertyHead, Node.ANY);
-		meta.remove(root, EventSource.esPropertyPrevious, Node.ANY);
-		meta.remove(root, EventSource.esPropertyGraphRevision, Node.ANY);
-		meta.remove(root, EventSource.esPropertyDefaultGraphRevision, Node.ANY);
-		meta.remove(root, EventSource.esPropertyRevision, Node.ANY);
-		meta.remove(root, EventSource.esPropertyGraph, Node.ANY);
-		meta.remove(root, EventSource.esPropertyAssertions, Node.ANY);
-		meta.remove(root, EventSource.esPropertyRetractions, Node.ANY);
-		meta.remove(root, EventSource.dctermsDate, Node.ANY);
+		meta.remove(metaDataRoot, RDF.Nodes.type, Node.ANY);
+		meta.remove(metaDataRoot, EventSource.esPropertyHead, Node.ANY);
+		meta.remove(metaDataRoot, EventSource.esPropertyPrevious, Node.ANY);
+		meta.remove(metaDataRoot, EventSource.esPropertyGraphRevision, Node.ANY);
+		meta.remove(metaDataRoot, EventSource.esPropertyDefaultGraphRevision, Node.ANY);
+		meta.remove(metaDataRoot, EventSource.esPropertyRevision, Node.ANY);
+		meta.remove(metaDataRoot, EventSource.esPropertyGraph, Node.ANY);
+		meta.remove(metaDataRoot, EventSource.esPropertyAssertions, Node.ANY);
+		meta.remove(metaDataRoot, EventSource.esPropertyRetractions, Node.ANY);
+		meta.remove(metaDataRoot, EventSource.dctermsDate, Node.ANY);
 		
 		// Replace the temporary root node by the event URI
-		replaceSubject(meta, root, resource);
+		replaceSubject(meta, metaDataRoot, resource);
 		
 		// Copy the data into the event log
 		GraphUtil.addInto(eventSource.getDefaultGraph(), meta);

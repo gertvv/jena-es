@@ -25,9 +25,11 @@ import com.hp.hpl.jena.graph.Graph;
 import com.hp.hpl.jena.graph.GraphUtil;
 import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.graph.NodeFactory;
+import com.hp.hpl.jena.graph.Triple;
 import com.hp.hpl.jena.query.ReadWrite;
 import com.hp.hpl.jena.sparql.core.DatasetGraph;
 import com.hp.hpl.jena.sparql.graph.GraphFactory;
+import com.hp.hpl.jena.vocabulary.RDF;
 
 @Controller
 @RequestMapping("/datasets/{datasetId}/data")
@@ -91,26 +93,63 @@ public class GraphStoreController {
 		response.setHeader("X-EventSource-Version", newVersion);
 	}
 	
+	public String handleCopyOfParam(Graph graph, Map<String, String> params) {
+		System.out.println(graph);
+		System.out.println(params);
+		if ((graph == null && !params.containsKey("copyOf")) || (graph != null && params.containsKey("copyOf"))) {
+			throw new BadRequestException("Expected one and only one of:\n - An RDF graph in the request body\n - A revision URI in the copyOf URL parameter\n");
+		}
+		if (params.containsKey("copyOf")) { 
+			String copyOf = params.get("copyOf");
+			params.remove("copyOf");
+			return copyOf;
+		}
+		return null;
+	}
+	
 	@RequestMapping(method=RequestMethod.POST)
 	public void post(
 			@PathVariable String datasetId,
-			@RequestParam Map<String,String> params,
+			final @RequestParam Map<String,String> params,
 			@RequestHeader(value="X-Accept-EventSource-Version", required=false) String version,
-			final @RequestBody Graph graph,
+			final @RequestBody(required=false) Graph graph,
 			HttpServletRequest request,
 			HttpServletResponse response) {
+		final String copyOf = handleCopyOfParam(graph, params);
 		final DatasetGraphEventSourcing dataset = getDataset(datasetId);
 		final TargetGraph target = determineTargetGraph(params);
+		
+		d_log.debug("GraphStore POST " + datasetId + " " + target + " " + (copyOf != null ? "copyOf=" + copyOf : "(request body)"));
 
-		d_log.debug("GraphStore POST " + datasetId + " " + target);
+		final Node sourceRevisionUri = copyOf != null ? NodeFactory.createURI(copyOf) : null;
 
 		Runnable action = new Runnable() {
 			@Override
 			public void run() {
-				GraphUtil.addInto(target.get(dataset), graph);
+				if (copyOf != null) {
+					target.set(dataset, d_eventSource.getRevision(sourceRevisionUri));
+				} else {
+					GraphUtil.addInto(target.get(dataset), graph);
+				}
 			}
 		};
-		String newVersion = Util.runReturningVersion(dataset, version, action, Util.versionMetaData(request));
+
+		Graph versionMetaData = Util.versionMetaData(request);
+		if (copyOf != null) {
+			Node graphRev = NodeFactory.createAnon();
+			Node newRevision = NodeFactory.createAnon();
+			if (target.isDefault()) {
+				versionMetaData.add(Triple.create(graphRev, RDF.Nodes.type, EventSource.esClassDefaultGraphRevision));
+			} else {
+				versionMetaData.add(Triple.create(graphRev, RDF.Nodes.type, EventSource.esClassNamedGraphRevision));
+				versionMetaData.add(Triple.create(graphRev, EventSource.esPropertyGraph, NodeFactory.createURI(target.getUri())));
+			}
+			versionMetaData.add(Triple.create(graphRev, EventSource.esPropertyRevision, newRevision));
+			versionMetaData.add(Triple.create(newRevision, EventSource.esPropertyMergedRevision, sourceRevisionUri));
+			versionMetaData.add(Triple.create(newRevision, EventSource.esPropertyMergeType, EventSource.esClassMergeTypeCopyTheirs));
+		}
+
+		String newVersion = Util.runReturningVersion(dataset, version, action, versionMetaData);
 		response.setHeader("X-EventSource-Version", newVersion);
 	}
 
