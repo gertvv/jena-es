@@ -103,10 +103,13 @@ public class DatasetController {
 	@ResponseBody
 	public Graph get(@PathVariable String id) {
 		d_log.debug("Dataset GET " + id);
+		
+		String uri = eventSource.getDatasetUri(id);
+		Util.assertDatasetExists(eventSource, NodeFactory.createURI(uri));
 
-		String query = datasetInfoQuery.replaceAll("\\$dataset", "<" + eventSource.getDatasetUri(id) + ">");
+		String query = datasetInfoQuery.replaceAll("\\$dataset", "<" + uri + ">");
 		Graph info = Util.queryDataStore(eventSource, query);
-		String queryMerged = currentMergedRevisionsQuery.replaceAll("\\$dataset", "<" + eventSource.getDatasetUri(id) + ">");
+		String queryMerged = currentMergedRevisionsQuery.replaceAll("\\$dataset", "<" + uri + ">");
 		GraphUtil.addInto(info, Util.queryDataStore(eventSource, queryMerged));
 		return info;
 	}
@@ -116,9 +119,12 @@ public class DatasetController {
 	public Graph history(@PathVariable String id) {
 		d_log.debug("Dataset GET " + id + "/history");
 
-		String query = datasetHistoryQuery.replaceAll("\\$dataset", "<" + eventSource.getDatasetUri(id) + ">");
+		String uri = eventSource.getDatasetUri(id);
+		Util.assertDatasetExists(eventSource, NodeFactory.createURI(uri));
+
+		String query = datasetHistoryQuery.replaceAll("\\$dataset", "<" + uri + ">");
 		Graph history = Util.queryDataStore(eventSource, query);
-		String queryMerged = allMergedRevisionsQuery.replaceAll("\\$dataset", "<" + eventSource.getDatasetUri(id) + ">");
+		String queryMerged = allMergedRevisionsQuery.replaceAll("\\$dataset", "<" + uri + ">");
 		GraphUtil.addInto(history, Util.queryDataStore(eventSource, queryMerged));
 		return history;
 	}
