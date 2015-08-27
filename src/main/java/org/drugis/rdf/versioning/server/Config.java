@@ -28,21 +28,33 @@ public class Config extends WebMvcAutoConfigurationAdapter {
 
     @Bean
     public String datasetHistoryQuery() throws IOException {
-    	Resource resource = new ClassPathResource("/org/drugis/rdf/versioning/datasetHistory.sparql");
-		return FileCopyUtils.copyToString(new InputStreamReader(resource.getInputStream()));
+    	return getQueryResource("datasetHistory");
     }
     
     @Bean
     public String datasetInfoQuery() throws IOException {
-    	Resource resource = new ClassPathResource("/org/drugis/rdf/versioning/datasetInfo.sparql");
-		return FileCopyUtils.copyToString(new InputStreamReader(resource.getInputStream()));
+    	return getQueryResource("datasetInfo");
     }
     
     @Bean
     public String versionInfoQuery() throws IOException {
-    	Resource resource = new ClassPathResource("/org/drugis/rdf/versioning/versionInfo.sparql");
-		return FileCopyUtils.copyToString(new InputStreamReader(resource.getInputStream()));
+    	return getQueryResource("versionInfo");
     }
+
+    @Bean
+    public String allMergedRevisionsQuery() throws IOException {
+    	return getQueryResource("allMergedRevisions");
+    }
+
+    @Bean
+    public String currentMergedRevisionsQuery() throws IOException {
+    	return getQueryResource("currentMergedRevisions");
+    }
+
+	private String getQueryResource(String name) throws IOException {
+		Resource resource = new ClassPathResource("/org/drugis/rdf/versioning/" + name + ".sparql");
+		return FileCopyUtils.copyToString(new InputStreamReader(resource.getInputStream()));
+	}
 	
 	@Bean
 	public EventSource eventSource() {

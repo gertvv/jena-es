@@ -1,6 +1,8 @@
 package org.drugis.rdf.versioning.server;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -20,6 +22,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
 import com.hp.hpl.jena.graph.Graph;
+import com.hp.hpl.jena.graph.GraphUtil;
 import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.graph.NodeFactory;
 import com.hp.hpl.jena.graph.Triple;
@@ -33,7 +36,9 @@ import com.hp.hpl.jena.vocabulary.RDF;
 public class DatasetController {
 	@Autowired EventSource eventSource;
 	@Autowired String datasetInfoQuery;
+	@Autowired String currentMergedRevisionsQuery;
 	@Autowired String datasetHistoryQuery;
+	@Autowired String allMergedRevisionsQuery;
 	Log d_log = LogFactory.getLog(getClass());
 
 	@RequestMapping(value="", method=RequestMethod.GET, produces="text/html")
@@ -100,7 +105,10 @@ public class DatasetController {
 		d_log.debug("Dataset GET " + id);
 
 		String query = datasetInfoQuery.replaceAll("\\$dataset", "<" + eventSource.getDatasetUri(id) + ">");
-		return Util.queryDataStore(eventSource, query);
+		Graph info = Util.queryDataStore(eventSource, query);
+		String queryMerged = currentMergedRevisionsQuery.replaceAll("\\$dataset", "<" + eventSource.getDatasetUri(id) + ">");
+		GraphUtil.addInto(info, Util.queryDataStore(eventSource, queryMerged));
+		return info;
 	}
 
 	@RequestMapping(value="/{id}/history", method=RequestMethod.GET)
@@ -109,6 +117,9 @@ public class DatasetController {
 		d_log.debug("Dataset GET " + id + "/history");
 
 		String query = datasetHistoryQuery.replaceAll("\\$dataset", "<" + eventSource.getDatasetUri(id) + ">");
-		return Util.queryDataStore(eventSource, query);
+		Graph history = Util.queryDataStore(eventSource, query);
+		String queryMerged = allMergedRevisionsQuery.replaceAll("\\$dataset", "<" + eventSource.getDatasetUri(id) + ">");
+		GraphUtil.addInto(history, Util.queryDataStore(eventSource, queryMerged));
+		return history;
 	}
 }

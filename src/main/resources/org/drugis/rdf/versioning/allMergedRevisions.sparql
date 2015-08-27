@@ -1,0 +1,10 @@
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX es: <http://drugis.org/eventSourcing/es#>
+
+CONSTRUCT {
+  ?mergedRev es:dataset ?mergedDataset .
+} WHERE {
+  $dataset es:head/es:previous*/(es:graph_revision|es:default_graph_revision)/es:revision? ?rev .
+  ?rev es:merged_revision ?mergedRev .
+  ?mergedDataset es:head/es:previous*/(es:graph_revision|es:default_graph_revision)/es:revision ?mergedRev .
+}
