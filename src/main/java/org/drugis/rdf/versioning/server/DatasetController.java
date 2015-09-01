@@ -69,16 +69,20 @@ public class DatasetController {
 
 	@RequestMapping(value="", method=RequestMethod.GET, produces="application/json")
 	@ResponseBody
-	public List<String> listAsJson() {
+	public List<DatasetInfo> listAsJson() {
 		d_log.debug("Dataset LIST");
-		List<String> jsonResponse = new ArrayList<>();
+		List<DatasetInfo> jsonResponse = new ArrayList<>();
 		Transactional transactional = (Transactional)eventSource.getDataStore();
 		transactional.begin(ReadWrite.READ);
 		try {
-			ExtendedIterator<Triple> find = eventSource.getDataStore().getDefaultGraph().find(Node.ANY, RDF.Nodes.type, EventSource.esClassDataset);
+			Graph graph = eventSource.getDataStore().getDefaultGraph();
+			ExtendedIterator<Triple> find = graph.find(Node.ANY, RDF.Nodes.type, EventSource.esClassDataset);
 			while (find.hasNext()) {
 				Triple triple = find.next();
-				jsonResponse.add(triple.getSubject().getURI());
+				Node dataset = triple.getSubject();
+				Node head = Util.getUniqueOptionalObject(graph.find(dataset, EventSource.esPropertyHead, Node.ANY));
+				Node creator = Util.getUniqueOptionalObject(graph.find(dataset, EventSource.dctermsCreator, Node.ANY));
+				jsonResponse.add(new DatasetInfo(dataset.getURI(), head != null ? head.getURI() : null, creator != null ? creator.getURI() : null));
 			}
 		} finally {
 			transactional.end();

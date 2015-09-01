@@ -10,6 +10,8 @@ import java.util.Set;
 import java.util.TimeZone;
 import java.util.UUID;
 
+import org.drugis.rdf.versioning.server.Util;
+
 import com.github.rholder.fauxflake.IdGenerators;
 import com.github.rholder.fauxflake.api.IdGenerator;
 import com.hp.hpl.jena.datatypes.xsd.XSDDatatype;
@@ -98,7 +100,7 @@ public class EventSource {
 
 	public Node getLatestVersionUri(Node dataset) {
 		assertDatasetExists(dataset);
-		return getUniqueObject(d_datastore.getDefaultGraph().find(dataset, esPropertyHead, Node.ANY));
+		return Util.getUniqueObject(d_datastore.getDefaultGraph().find(dataset, esPropertyHead, Node.ANY));
 	}
 
 	private void assertDatasetExists(Node dataset) {
@@ -107,51 +109,21 @@ public class EventSource {
 		}
 	}
 	
-	private static Node getUniqueOptionalObject(Iterator<Triple> result) {
-		if (result.hasNext()) {
-			Node object = result.next().getObject();
-			if (result.hasNext()) {
-				throw new IllegalStateException("Multiple subjects on property of arity 1");
-			}
-			return object;
-		}
-		return null;
-	}
-	
-	private static Node getUniqueObject(Iterator<Triple> result) {
-		Node object = getUniqueOptionalObject(result);
-		if (object == null) {
-			throw new IllegalStateException("Zero subjects on property of arity 1");
-		}
-		return object;
-	}
-
-	private static Node getUniqueOptionalSubject(Iterator<Triple> result) {
-		if (result.hasNext()) {
-			Node subject = result.next().getSubject();
-			if (result.hasNext()) {
-				throw new IllegalStateException("Multiple subjects on property of arity 1");
-			}
-			return subject;
-		}
-		return null;
-	}
-	
 	private static Map<Node, Node> getGraphRevisions(DatasetGraph eventSource, Node version) {
 		Map<Node, Node> map = new HashMap<Node, Node>();
 		
 		// Named graphs
 		for (Iterator<Triple> triples = eventSource.getDefaultGraph().find(version, esPropertyGraphRevision, Node.ANY); triples.hasNext(); ) {
 			Node graphRevision = triples.next().getObject();
-			Node graphName = getUniqueObject(eventSource.getDefaultGraph().find(graphRevision, esPropertyGraph, Node.ANY));
-			Node revision = getUniqueObject(eventSource.getDefaultGraph().find(graphRevision, esPropertyRevision, Node.ANY));
+			Node graphName = Util.getUniqueObject(eventSource.getDefaultGraph().find(graphRevision, esPropertyGraph, Node.ANY));
+			Node revision = Util.getUniqueObject(eventSource.getDefaultGraph().find(graphRevision, esPropertyRevision, Node.ANY));
 			map.put(graphName, revision);
 		}
 		
 		// Default graph
-		Node graphRevision = getUniqueOptionalObject(eventSource.getDefaultGraph().find(version, esPropertyDefaultGraphRevision, Node.ANY));
+		Node graphRevision = Util.getUniqueOptionalObject(eventSource.getDefaultGraph().find(version, esPropertyDefaultGraphRevision, Node.ANY));
 		if (graphRevision != null) {
-			Node revision = getUniqueObject(eventSource.getDefaultGraph().find(graphRevision, esPropertyRevision, Node.ANY));
+			Node revision = Util.getUniqueObject(eventSource.getDefaultGraph().find(graphRevision, esPropertyRevision, Node.ANY));
 			map.put(Quad.defaultGraphNodeGenerated, revision);
 		}
 		return map;
@@ -181,9 +153,9 @@ public class EventSource {
 	}
 	
 	private boolean versionExists(Node dataset, Node version) {
-		Node current = getUniqueObject(d_datastore.getDefaultGraph().find(dataset, esPropertyHead, Node.ANY));
+		Node current = Util.getUniqueObject(d_datastore.getDefaultGraph().find(dataset, esPropertyHead, Node.ANY));
 		while (!version.equals(current)) {
-			current = getUniqueOptionalObject(d_datastore.getDefaultGraph().find(current, esPropertyPrevious, Node.ANY));
+			current = Util.getUniqueOptionalObject(d_datastore.getDefaultGraph().find(current, esPropertyPrevious, Node.ANY));
 			if (current == null) {
 				return false;
 			}
@@ -203,7 +175,7 @@ public class EventSource {
 		if (!revisionExists(revision)) {
 			return null;
 		}
-		Node previous = getUniqueOptionalObject(d_datastore.getDefaultGraph().find(revision, esPropertyPrevious, Node.ANY));
+		Node previous = Util.getUniqueOptionalObject(d_datastore.getDefaultGraph().find(revision, esPropertyPrevious, Node.ANY));
 		Graph graph = GraphFactory.createGraphMem();
 		if (previous != null) {
 			graph = getRevision(previous);
@@ -303,15 +275,15 @@ public class EventSource {
 			Node newRevision) {
 		Node graphRevision = null;
 		if (graph.equals(Quad.defaultGraphNodeGenerated)) {
-			graphRevision = getUniqueOptionalSubject(meta.find(Node.ANY, RDF.Nodes.type, EventSource.esClassDefaultGraphRevision));
+			graphRevision = Util.getUniqueOptionalSubject(meta.find(Node.ANY, RDF.Nodes.type, EventSource.esClassDefaultGraphRevision));
 		} else {
-			graphRevision = getUniqueOptionalSubject(meta.find(Node.ANY, RDF.Nodes.type, EventSource.esClassNamedGraphRevision).filterKeep(new Filter<Triple>() {
+			graphRevision = Util.getUniqueOptionalSubject(meta.find(Node.ANY, RDF.Nodes.type, EventSource.esClassNamedGraphRevision).filterKeep(new Filter<Triple>() {
 				@Override public boolean accept(Triple o) {
 					return meta.find(o.getSubject(), EventSource.esPropertyGraph, graph).hasNext();
 				}}));
 		}
 		if (graphRevision != null) {
-			Node revisionMetaRoot = getUniqueObject(meta.find(graphRevision, esPropertyRevision, Node.ANY));
+			Node revisionMetaRoot = Util.getUniqueObject(meta.find(graphRevision, esPropertyRevision, Node.ANY));
 			addMetaData(d_datastore, newRevision, meta, revisionMetaRoot);
 		}
 	}
@@ -481,7 +453,7 @@ public class EventSource {
 
 		addMetaData(d_datastore, meta, version, esClassDatasetVersion);
 		Node root = getMetaDataRoot(meta, esClassDatasetVersion);
-		Node creator = root == null ? null : getUniqueOptionalObject(meta.find(root, dctermsCreator, Node.ANY));
+		Node creator = root == null ? null : Util.getUniqueOptionalObject(meta.find(root, dctermsCreator, Node.ANY));
 		if (creator != null) {
 			addTriple(d_datastore, dataset, dctermsCreator, creator);
 		}

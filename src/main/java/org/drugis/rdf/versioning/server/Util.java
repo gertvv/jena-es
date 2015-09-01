@@ -1,6 +1,7 @@
 package org.drugis.rdf.versioning.server;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Iterator;
 import java.util.Observable;
 import java.util.Observer;
 
@@ -123,6 +124,36 @@ public class Util {
 		}
 		
 		return graph;
+	}
+
+	public static Node getUniqueOptionalObject(Iterator<Triple> result) {
+		if (result.hasNext()) {
+			Node object = result.next().getObject();
+			if (result.hasNext()) {
+				throw new IllegalStateException("Multiple subjects on property of arity 1");
+			}
+			return object;
+		}
+		return null;
+	}
+
+	public static Node getUniqueObject(Iterator<Triple> result) {
+		Node object = getUniqueOptionalObject(result);
+		if (object == null) {
+			throw new IllegalStateException("Zero subjects on property of arity 1");
+		}
+		return object;
+	}
+
+	public static Node getUniqueOptionalSubject(Iterator<Triple> result) {
+		if (result.hasNext()) {
+			Node subject = result.next().getSubject();
+			if (result.hasNext()) {
+				throw new IllegalStateException("Multiple subjects on property of arity 1");
+			}
+			return subject;
+		}
+		return null;
 	}
 
 }
