@@ -19,6 +19,7 @@ import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.util.FileCopyUtils;
 import org.springframework.web.filter.CharacterEncodingFilter;
 
+import com.hp.hpl.jena.sparql.core.DatasetGraph;
 import com.hp.hpl.jena.tdb.TDBFactory;
 
 @Configuration
@@ -58,7 +59,13 @@ public class Config extends WebMvcAutoConfigurationAdapter {
 	
 	@Bean
 	public EventSource eventSource() {
-		return new EventSource(TDBFactory.createDatasetGraph("DB"), uriPrefix);
+		final DatasetGraph storage = TDBFactory.createDatasetGraph("DB");
+		Runtime.getRuntime().addShutdownHook(new Thread() {
+			@Override public void run() {
+				storage.close();
+			}
+		});
+		return new EventSource(storage, uriPrefix);
 	}
 
 	@Bean
