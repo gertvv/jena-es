@@ -39,13 +39,14 @@ public class DatasetGraphDelta extends DatasetGraphBase {
 	}
 
 	private Graph touchGraph(Node graphName) {
+		boolean def = graphName.equals(Quad.defaultGraphNodeGenerated);
 		if (!d_touched.containsKey(graphName)) {
-			Graph graph = d_base.getGraph(graphName);
+			Graph graph = def ? d_base.getDefaultGraph() : d_base.getGraph(graphName);
 			if (graph == null) {
 				graph = GraphFactory.createGraphMem();
 			}
 			Delta delta = new Delta(graph);
-			if (graphName.equals(Quad.defaultGraphNodeGenerated)) {
+			if (def) {
 				d_next.setDefaultGraph(delta);
 			} else {
 				d_next.addGraph(graphName, delta);

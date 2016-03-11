@@ -14,6 +14,7 @@ import org.junit.Test;
 import com.hp.hpl.jena.graph.Graph;
 import com.hp.hpl.jena.graph.Node;
 import com.hp.hpl.jena.graph.NodeFactory;
+import com.hp.hpl.jena.graph.Triple;
 import com.hp.hpl.jena.sparql.core.DatasetGraph;
 import com.hp.hpl.jena.sparql.core.DatasetGraphFactory;
 import com.hp.hpl.jena.sparql.core.Quad;
@@ -61,6 +62,8 @@ public class DatasetGraphDeltaTest {
 				createURI("http://example.com/name"),
 				createLiteral("Thing 2"));
 		d_base.add(d_B2name);
+		
+		d_base.getDefaultGraph().add(new Triple(createURI("http://example.com/default"), createURI("http://example.com/name"), createLiteral("No name")));
 		
 		d_next = new DatasetGraphDelta(d_base);
 	}
@@ -242,6 +245,18 @@ public class DatasetGraphDeltaTest {
 		assertTrue(graph.isIsomorphicWith(d_next.getModifications().get(d_graphA)));
 		assertTrue(graph.isIsomorphicWith(d_next.getModifications().get(d_graphA).getAdditions()));
 		assertTrue(d_base.getGraph(d_graphA).isIsomorphicWith(d_next.getModifications().get(d_graphA).getDeletions()));
+	}
+	
+	@Test
+	public void changesOverwriteDefaultGraph() {
+		Graph graph = GraphFactory.createGraphMem();
+        Quad quad = new Quad(d_graphA, createURI("http://example.com/Thing3"), createURI("http://example.com/name"), createLiteral("Thing 3"));
+		graph.add(quad.asTriple());
+		d_next.setDefaultGraph(graph);
+		assertEquals(Collections.singleton(Quad.defaultGraphNodeGenerated), d_next.getModifications().keySet());
+		assertTrue(graph.isIsomorphicWith(d_next.getModifications().get(Quad.defaultGraphNodeGenerated)));
+		assertTrue(graph.isIsomorphicWith(d_next.getModifications().get(Quad.defaultGraphNodeGenerated).getAdditions()));
+		assertTrue(d_base.getDefaultGraph().isIsomorphicWith(d_next.getModifications().get(Quad.defaultGraphNodeGenerated).getDeletions()));
 	}
 	
 	//
