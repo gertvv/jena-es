@@ -73,9 +73,9 @@ public class EventSource {
 
 	private DatasetGraph d_datastore;
 	private String VERSION;
-	private String REVISION;
-	private String ASSERT;
-	private String RETRACT;
+	public final String REVISION;
+	public final String ASSERT;
+	public final String RETRACT;
 	private String SKOLEM;
 	private String d_uriPrefix;
 	
@@ -401,7 +401,7 @@ public class EventSource {
 		return revisionId;
 	}
 
-	private Graph skolemize(Graph graph) {
+	public Graph skolemize(Graph graph) {
 		Set<Node> blanks = new HashSet<Node>();
 		
 		for (Iterator<Node> nodes = GraphUtils.allNodes(graph); nodes.hasNext(); ) {
